@@ -1,17 +1,18 @@
 {
   "expo": {
-    "name": "smartcb",
+    "name": "SmartCB",
     "slug": "smartcb",
     "version": "1.0.0",
+    "owner": "tak3n",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "smartcb",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#121212"
     },
     "ios": {
       "supportsTablet": true
@@ -19,7 +20,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#121212"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
