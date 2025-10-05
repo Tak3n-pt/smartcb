@@ -9,7 +9,11 @@ export type EventType =
   | 'auto_off'
   | 'outage'
   | 'restore'
-  | 'threshold_breach';
+  | 'threshold_breach'
+  | 'overvoltage'
+  | 'undervoltage'
+  | 'overcurrent'
+  | 'overload';
 
 export interface Event {
   id: string;

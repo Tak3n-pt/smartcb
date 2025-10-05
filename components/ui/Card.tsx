@@ -7,7 +7,7 @@ import { colors, spacing, borderRadius, shadows } from '../../theme';
 
 interface CardProps {
   children: React.ReactNode;
-  style?: ViewStyle;
+  style?: ViewStyle | ViewStyle[];
   elevated?: boolean;
 }
 

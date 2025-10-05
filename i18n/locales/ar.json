@@ -1,0 +1,420 @@
+{
+  "common": {
+    "appName": "القاطع الذكي",
+    "appTagline": "نظام حماية الدوائر الكهربائية",
+    "loading": "جاري التحميل...",
+    "error": "خطأ",
+    "success": "نجح",
+    "cancel": "إلغاء",
+    "save": "حفظ",
+    "delete": "حذف",
+    "edit": "تعديل",
+    "done": "تم",
+    "close": "إغلاق",
+    "back": "رجوع",
+    "next": "التالي",
+    "skip": "تخطي",
+    "retry": "إعادة المحاولة",
+    "ok": "موافق",
+    "yes": "نعم",
+    "no": "لا",
+    "on": "تشغيل",
+    "off": "إيقاف",
+    "enabled": "مفعّل",
+    "disabled": "معطّل",
+    "from": "من",
+    "to": "إلى",
+    "relativeTime": {
+      "justNow": "منذ لحظات",
+      "minute": "منذ {{count}} دقيقة",
+      "minutes": "منذ {{count}} دقيقة",
+      "hour": "منذ {{count}} ساعة",
+      "hours": "منذ {{count}} ساعة",
+      "day": "منذ {{count}} يوم",
+      "days": "منذ {{count}} يوم"
+    },
+    "months": {
+      "short": {
+        "jan": "يناير",
+        "feb": "فبراير",
+        "mar": "مارس",
+        "apr": "أبريل",
+        "may": "مايو",
+        "jun": "يونيو",
+        "jul": "يوليو",
+        "aug": "أغسطس",
+        "sep": "سبتمبر",
+        "oct": "أكتوبر",
+        "nov": "نوفمبر",
+        "dec": "ديسمبر"
+      }
+    },
+    "dateFormats": {
+      "short": "{{day}} {{month}} {{year}}"
+    },
+    "timeFormats": {
+      "short": "{{hour}}:{{minute}} {{period}}"
+    },
+    "timePeriods": {
+      "am": "ص",
+      "pm": "م"
+    },
+    "duration": {
+      "hour": "{{count}} ساعة",
+      "hours": "{{count}} ساعة",
+      "minute": "{{count}} دقيقة",
+      "minutes": "{{count}} دقيقة",
+      "second": "{{count}} ثانية",
+      "seconds": "{{count}} ثانية",
+      "shortHour": "{{count}}س",
+      "shortMinute": "{{count}}د",
+      "shortSecond": "{{count}}ث"
+    }
+  },
+  "welcome": {
+    "title": "مرحباً بك في القاطع الذكي",
+    "subtitle": "مركز تحكم متطور لقاطع الدائرة الذكي الخاص بك، يوفر الوضوح والتحكم وراحة البال.",
+    "getStarted": "ابدأ الآن",
+    "footerText": "إدارة الطاقة بسلاسة في متناول يدك.",
+    "features": {
+      "liveMonitoring": {
+        "title": "مراقبة مباشرة",
+        "description": "تتبع الجهد والتيار والطاقة في الوقت الفعلي مع تنبيهات فورية."
+      },
+      "safetyAutomation": {
+        "title": "الحماية التلقائية",
+        "description": "التحكم الذكي بالمرحل يتفاعل فوراً لحماية أجهزتك من الأعطال الكهربائية."
+      },
+      "insightfulAnalytics": {
+        "title": "تحليلات شاملة",
+        "description": "فهم اتجاهات الاستهلاك وتحسين استخدام الطاقة مع لوحات معلومات واضحة."
+      }
+    }
+  },
+  "linkDevice": {
+    "title": "ربط الجهاز",
+    "subtitle": "قم بتوصيل قاطع الدائرة الذكي الخاص بك لبدء المراقبة",
+    "connectionMethods": "طرق الاتصال",
+    "bluetooth": {
+      "title": "الاتصال عبر البلوتوث",
+      "description": "الاتصال مباشرة عبر البلوتوث للإعداد السريع",
+      "button": "الاتصال عبر البلوتوث",
+      "scanning": "جاري البحث عن الأجهزة...",
+      "found": "تم العثور على الجهاز!",
+      "scanButton": "البحث عن الأجهزة",
+      "changeDevice": "تغيير الجهاز",
+      "tips": {
+        "power": "تأكد من تشغيل ESP32",
+        "enable": "قم بتفعيل البلوتوث على هاتفك",
+        "distance": "ابق على مسافة 10 أمتار من الجهاز"
+      }
+    },
+    "wifi": {
+      "title": "الاتصال عبر WiFi",
+      "description": "الاتصال عبر الشبكة المحلية للاتصال المستقر",
+      "button": "الاتصال عبر WiFi",
+      "ipAddress": "عنوان IP للـ ESP32",
+      "port": "المنفذ",
+      "connect": "اتصل",
+      "tips": {
+        "network": "اتصل بنفس شبكة WiFi",
+        "ip": "أدخل عنوان IP لجهاز ESP32",
+        "port": "المنفذ الافتراضي عادة 80 أو 8080"
+      }
+    },
+    "status": {
+      "scanning": "جاري البحث عن الأجهزة...",
+      "connecting": "جاري الاتصال بـ ESP32...",
+      "connected": "تم الاتصال بنجاح!",
+      "failed": "فشل الاتصال. يرجى المحاولة مرة أخرى."
+    },
+    "buttons": {
+      "connecting": "جاري الاتصال...",
+      "scanning": "جاري البحث...",
+      "scanAndConnect": "البحث والاتصال",
+      "connect": "اتصل"
+    },
+    "help": "هل تواجه مشكلة في الاتصال؟",
+    "modal": {
+      "title": "الأجهزة المتاحة",
+      "scanning": "جاري البحث عن الأجهزة...",
+      "noDevices": "لم يتم العثور على أجهزة"
+    },
+    "demoMode": "متابعة في وضع التجربة",
+    "goBack": "رجوع"
+  },
+  "home": {
+    "title": "لوحة التحكم",
+    "connectionStatus": {
+      "connected": "متصل",
+      "disconnected": "غير متصل",
+      "demoMode": "وضع التجربة - استخدام بيانات وهمية",
+      "connectButton": "اتصل"
+    },
+    "relayControl": {
+      "title": "التحكم بالمرحل",
+      "turnOn": "تشغيل",
+      "turnOff": "إيقاف",
+      "status": "الحالة",
+      "turnedOn": "القاطع الكهربائي مُشغّل",
+      "turnedOff": "القاطع الكهربائي مُطفأ"
+    },
+    "readings": {
+      "voltage": "الجهد الكهربائي",
+      "current": "التيار الكهربائي",
+      "power": "الطاقة",
+      "energy": "الطاقة المستهلكة",
+      "frequency": "التردد",
+      "powerFactor": "معامل القدرة",
+      "apparentPower": "القدرة الظاهرية",
+      "reactivePower": "القدرة التفاعلية"
+    },
+    "units": {
+      "voltage": "فولت",
+      "current": "أمبير",
+      "power": "واط",
+      "energy": "كيلوواط/ساعة",
+      "frequency": "هرتز",
+      "apparentPower": "فولت أمبير",
+      "reactivePower": "فار",
+      "powerKilowatt": "ك.و"
+    },
+    "quickActions": "إجراءات سريعة",
+    "viewEvents": "عرض الأحداث",
+    "viewAnalytics": "عرض التحليلات"
+  },
+  "events": {
+    "title": "سجل الأحداث والتحليلات",
+    "consumption": {
+      "title": "استهلاك الطاقة",
+      "views": {
+        "hourly": "ساعي",
+        "daily": "يومي",
+        "weekly": "أسبوعي",
+        "monthly": "شهري"
+      },
+      "total": "الإجمالي",
+      "average": "المتوسط",
+      "dateRange": "نطاق التاريخ",
+      "weekLabel": "الأسبوع {{count}}",
+      "weekAbbreviation": "أ{{count}}",
+      "daysOfWeek": {
+        "monday": "الاثنين",
+        "tuesday": "الثلاثاء",
+        "wednesday": "الأربعاء",
+        "thursday": "الخميس",
+        "friday": "الجمعة",
+        "saturday": "السبت",
+        "sunday": "الأحد"
+      },
+      "monthsShort": {
+        "jan": "يناير",
+        "feb": "فبراير",
+        "mar": "مارس",
+        "apr": "أبريل",
+        "may": "مايو",
+        "jun": "يونيو",
+        "jul": "يوليو",
+        "aug": "أغسطس",
+        "sep": "سبتمبر",
+        "oct": "أكتوبر",
+        "nov": "نوفمبر",
+        "dec": "ديسمبر"
+      }
+    },
+    "graphs": {
+      "title": "اتجاهات المعاملات",
+      "subtitle": "تحليل المعاملات الكهربائية عبر الزمن",
+      "voltage": {
+        "title": "اتجاه الجهد",
+        "safeRange": "النطاق الآمن: 200 - 240 فولت"
+      },
+      "current": {
+        "title": "اتجاه التيار",
+        "safeLimit": "الحد الآمن: {{value}}{{unit}} كحد أقصى"
+      },
+      "power": {
+        "title": "استهلاك الطاقة"
+      },
+      "stats": {
+        "max": "الأعلى",
+        "min": "الأدنى",
+        "avg": "المتوسط",
+        "peak": "الذروة",
+        "low": "الأقل"
+      },
+      "breakdown": {
+        "hourly": "تفصيل 24 ساعة",
+        "daily": "التفصيل اليومي",
+        "weekly": "التفصيل الأسبوعي",
+        "monthly": "التفصيل الشهري"
+      }
+    },
+    "dateFilter": {
+      "title": "نطاق تاريخ الأحداث",
+      "from": "من",
+      "to": "إلى"
+    },
+    "safetyFilter": {
+      "title": "تصفية أحداث السلامة",
+      "clearAll": "مسح جميع الفلاتر",
+      "types": {
+        "overvoltage": "جهد زائد",
+        "undervoltage": "جهد منخفض",
+        "overcurrent": "تيار زائد",
+        "overload": "حمل زائد",
+        "outage": "انقطاع التيار"
+      }
+    },
+    "statistics": {
+      "title": "أحداث النظام",
+      "totalEvents": "إجمالي الأحداث",
+      "outages": "الانقطاعات",
+      "avgDuration": "متوسط المدة"
+    },
+    "eventsList": {
+      "title": "الأحداث",
+      "empty": "لا توجد أحداث",
+      "types": {
+        "manualOn": "تم تشغيل القاطع يدوياً",
+        "manualOff": "تم إيقاف القاطع يدوياً",
+        "autoOn": "تم تشغيل القاطع تلقائياً",
+        "autoOff": "تم إيقاف القاطع تلقائياً",
+        "outage": "تم اكتشاف انقطاع في التيار",
+        "restore": "تم استعادة التيار الكهربائي",
+        "thresholdBreach": "تم تجاوز الحد المسموح",
+        "overvoltage": "تم اكتشاف جهد زائد",
+        "undervoltage": "تم اكتشاف جهد منخفض",
+        "overcurrent": "تم اكتشاف تيار زائد",
+        "overload": "تم اكتشاف حمل زائد"
+      }
+    }
+  },
+  "settings": {
+    "title": "الإعدادات",
+    "tabs": {
+      "limits": "الحدود",
+      "alerts": "التنبيهات",
+      "timer": "المؤقت",
+      "system": "النظام"
+    },
+    "thresholds": {
+      "voltage": {
+        "title": "حماية الجهد",
+        "max": "أقصى جهد",
+        "min": "أدنى جهد",
+        "placeholder": "أدخل الجهد"
+      },
+      "current": {
+        "title": "حماية التيار",
+        "max": "أقصى تيار",
+        "enable": "تفعيل حماية التيار",
+        "placeholder": "أدخل التيار"
+      },
+      "frequency": {
+        "title": "حماية التردد",
+        "max": "أقصى تردد",
+        "min": "أدنى تردد",
+        "enable": "حماية التردد",
+        "placeholder": "أدخل التردد"
+      },
+      "powerFactor": {
+        "title": "معامل القدرة",
+        "min": "الحد الأدنى لمعامل القدرة",
+        "enable": "حماية معامل القدرة",
+        "placeholder": "أدخل معامل القدرة",
+        "unit": "معامل القدرة"
+      },
+      "energy": {
+        "title": "حد الطاقة",
+        "max": "أقصى طاقة",
+        "enable": "تفعيل حد الطاقة",
+        "resetDaily": "إعادة التعيين يومياً",
+        "placeholder": "أدخل حد الطاقة"
+      },
+      "reconnection": {
+        "title": "إعادة التوصيل التلقائي",
+        "subtitle": "وقت التشغيل المتوقع",
+        "delay": "تأخير إعادة التوصيل",
+        "delayUnit": "ثانية",
+        "maxAttempts": "الحد الأقصى للمحاولات",
+        "enable": "تفعيل إعادة التوصيل التلقائي",
+        "placeholder": "أدخل التأخير"
+      }
+    },
+    "notifications": {
+      "title": "إعدادات التنبيهات",
+      "powerOutage": "تنبيهات انقطاع التيار",
+      "powerRestore": "تنبيهات استعادة التيار",
+      "thresholdBreach": "تنبيهات تجاوز الحدود",
+      "deviceOffline": "تنبيهات انقطاع الجهاز",
+      "sound": "الصوت",
+      "vibration": "الاهتزاز",
+      "alertsTitle": "أنواع التنبيهات",
+      "preferencesTitle": "تفضيلات الإشعارات"
+    },
+    "schedule": {
+      "title": "الجدول التلقائي",
+      "subtitle": "تعيين أوقات التشغيل والإيقاف التلقائية",
+      "enable": "تفعيل الجدول",
+      "onTime": "التشغيل في",
+      "offTime": "الإيقاف في",
+      "days": "الأيام النشطة",
+      "daysOfWeek": {
+        "sunday": "الأحد",
+        "monday": "الاثنين",
+        "tuesday": "الثلاثاء",
+        "wednesday": "الأربعاء",
+        "thursday": "الخميس",
+        "friday": "الجمعة",
+        "saturday": "السبت"
+      }
+    },
+    "system": {
+      "title": "معلومات النظام",
+      "device": {
+        "title": "الجهاز",
+        "name": "اسم الجهاز",
+        "firmware": "إصدار البرنامج الثابت"
+      },
+      "network": {
+        "title": "الشبكة",
+        "wifi": "شبكة WiFi",
+        "signal": "قوة الإشارة",
+        "signalStrength": "الإشارة"
+      },
+      "app": {
+        "title": "التطبيق",
+        "version": "إصدار التطبيق",
+        "theme": "المظهر",
+        "language": "اللغة",
+        "dark": "داكن",
+        "light": "فاتح"
+      },
+      "languages": {
+        "english": "English",
+        "arabic": "العربية"
+      },
+      "actions": {
+        "resetDefaults": "إعادة تعيين الإعدادات الافتراضية",
+        "exportSettings": "تصدير الإعدادات",
+        "about": "حول القاطع الذكي"
+      }
+    }
+  },
+  "dev": {
+    "editScreen": {
+      "openCode": "افتح الشفرة الخاصة بهذه الشاشة:",
+      "changeText": "عدِّل أي نص، احفظ الملف، وسيتم تحديث التطبيق تلقائيًا.",
+      "linkText": "اضغط هنا إذا لم يتم تحديث التطبيق تلقائيًا بعد إجراء التغييرات"
+    }
+  },
+  "modal": {
+    "title": "معلومات المطور"
+  },
+  "notFound": {
+    "header": "عذرًا!",
+    "message": "هذه الشاشة غير متاحة.",
+    "cta": "العودة إلى الشاشة الرئيسية"
+  }
+}

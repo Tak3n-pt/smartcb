@@ -1,7 +1,8 @@
-// Current Meter Component (Linear Bar)
+﻿// Current Meter Component (Linear Bar)
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useThemeStore } from '../../store';
 import { colors, typography, spacing, borderRadius, getCurrentColor } from '../../theme';
 import { formatCurrent } from '../../utils';
@@ -15,9 +16,11 @@ export const CurrentMeter: React.FC<CurrentMeterProps> = ({
   current,
   maxCurrent = 16,
 }) => {
+  const { t } = useTranslation();
   const { theme } = useThemeStore();
   const themeColors = colors[theme];
   const color = getCurrentColor(current, theme === 'dark');
+  const currentUnit = t('home.units.current');
 
   // Calculate percentage
   const percentage = Math.min((current / maxCurrent) * 100, 100);
@@ -26,7 +29,7 @@ export const CurrentMeter: React.FC<CurrentMeterProps> = ({
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={[styles.label, { color: themeColors.text.secondary }]}>
-          Current
+          {t('home.readings.current')}
         </Text>
         <Text style={[styles.value, { color: themeColors.text.primary }]}>
           {formatCurrent(current)}
@@ -47,10 +50,10 @@ export const CurrentMeter: React.FC<CurrentMeterProps> = ({
 
       <View style={styles.footer}>
         <Text style={[styles.footerText, { color: themeColors.text.secondary }]}>
-          0A
+          {`0${currentUnit}`}
         </Text>
         <Text style={[styles.footerText, { color: themeColors.text.secondary }]}>
-          {maxCurrent}A
+          {`${maxCurrent}${currentUnit}`}
         </Text>
       </View>
     </View>

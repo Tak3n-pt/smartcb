@@ -4,6 +4,7 @@
 export const colors = {
   light: {
     primary: '#2196F3',
+    primaryLight: '#E3F2FD',
     secondary: '#757575',
     success: '#4CAF50',
     warning: '#FF9800',
@@ -23,6 +24,7 @@ export const colors = {
   },
   dark: {
     primary: '#42A5F5',
+    primaryLight: 'rgba(66, 165, 245, 0.15)',
     secondary: '#BDBDBD',
     success: '#66BB6A',
     warning: '#FFA726',

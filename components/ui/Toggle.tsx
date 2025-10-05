@@ -1,8 +1,9 @@
 // Toggle Switch Component for Relay Control
 
 import React from 'react';
-import { TouchableOpacity, View, Text, StyleSheet, Animated } from 'react-native';
+import { TouchableOpacity, View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useThemeStore } from '../../store';
 import { colors, typography, spacing, borderRadius, shadows } from '../../theme';
 
@@ -21,6 +22,7 @@ export const Toggle: React.FC<ToggleProps> = ({
   size = 'large',
   disabled = false,
 }) => {
+  const { t } = useTranslation();
   const { theme } = useThemeStore();
   const themeColors = colors[theme];
 
@@ -47,7 +49,7 @@ export const Toggle: React.FC<ToggleProps> = ({
           color="white"
         />
         <Text style={[styles.label, isLarge && styles.labelLarge]}>
-          {value ? 'ON' : 'OFF'}
+          {t(value ? 'common.on' : 'common.off')}
         </Text>
         {label && isLarge && (
           <Text style={styles.sublabel}>{label}</Text>
@@ -89,3 +91,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
 });
+
+
+

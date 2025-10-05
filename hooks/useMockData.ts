@@ -9,8 +9,8 @@ import { generateMockElectricalData, DATA_UPDATE_INTERVAL, ENERGY_INCREMENT_INTE
  */
 export const useMockData = () => {
   const { data, updateData, incrementEnergy } = useElectricalStore();
-  const dataIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const energyIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const dataIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const energyIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     // Update electrical data every 2 seconds

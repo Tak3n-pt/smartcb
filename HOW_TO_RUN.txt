@@ -1,0 +1,54 @@
+====================================
+HOW TO RUN SMARTCB APP
+====================================
+
+REQUIREMENTS:
+- Node.js (download from nodejs.org)
+- Smartphone with "Expo Go" app
+
+STEPS:
+
+1. INSTALL NODE.JS
+   - Go to: https://nodejs.org/
+   - Download and install LTS version
+
+2. OPEN COMMAND PROMPT
+   - Navigate to the smartcb folder
+   - Type "cmd" in the folder address bar
+   - Press Enter
+
+3. INSTALL DEPENDENCIES
+   Type this command and wait:
+
+   npm install
+
+4. START THE APP
+   Type this command:
+
+   npx expo start
+
+5. VIEW ON YOUR PHONE
+   - Install "Expo Go" from App Store/Play Store
+   - Scan the QR code that appears
+   - App opens on your phone!
+
+ALTERNATIVE - VIEW ON COMPUTER:
+   - After running "npx expo start"
+   - Press "w" key
+   - Opens in web browser
+
+TROUBLESHOOTING:
+
+If "npm install" fails:
+   npm cache clean --force
+   npm install
+
+If Expo doesn't start:
+   npx expo start --clear
+
+If QR code doesn't work:
+   npx expo start --tunnel
+
+====================================
+CONTACT SUPPORT IF ISSUES PERSIST
+====================================

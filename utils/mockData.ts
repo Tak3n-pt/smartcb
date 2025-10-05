@@ -1,6 +1,38 @@
-// Mock Data Generators for SmartCB
+﻿// Mock Data Generators for SmartCB
 
 import { ElectricalData, Event, EventType, Settings } from '../types';
+import { Ionicons } from '@expo/vector-icons';
+import i18n from '../i18n';
+
+type IoniconName = keyof typeof Ionicons.glyphMap;
+
+const EVENT_DESCRIPTION_MAP: Record<EventType, string> = {
+  manual_on: 'events.eventsList.types.manualOn',
+  manual_off: 'events.eventsList.types.manualOff',
+  auto_on: 'events.eventsList.types.autoOn',
+  auto_off: 'events.eventsList.types.autoOff',
+  outage: 'events.eventsList.types.outage',
+  restore: 'events.eventsList.types.restore',
+  threshold_breach: 'events.eventsList.types.thresholdBreach',
+  overvoltage: 'events.eventsList.types.overvoltage',
+  undervoltage: 'events.eventsList.types.undervoltage',
+  overcurrent: 'events.eventsList.types.overcurrent',
+  overload: 'events.eventsList.types.overload',
+};
+
+const MOCK_EVENT_TYPES: EventType[] = [
+  'manual_on',
+  'manual_off',
+  'auto_on',
+  'auto_off',
+  'outage',
+  'restore',
+  'threshold_breach',
+  'overvoltage',
+  'undervoltage',
+  'overcurrent',
+  'overload',
+];
 
 /**
  * Generate realistic mock electrical data
@@ -21,7 +53,7 @@ export const generateMockElectricalData = (relayState: boolean = true): Electric
   // Apparent power (VA = V * A)
   const apparentPower = voltage * current;
 
-  // Reactive power (VAR = sqrt(VA² - W²))
+  // Reactive power (VAR = sqrt(VAÂ² - WÂ²))
   const reactivePower = Math.sqrt(Math.pow(apparentPower, 2) - Math.pow(power, 2));
 
   // Frequency: 50Hz with small fluctuation
@@ -110,49 +142,19 @@ export const generateDefaultSettings = (): Settings => {
  */
 export const generateMockEvents = (count: number = 20): Event[] => {
   const events: Event[] = [];
-  const eventTypes: EventType[] = [
-    'manual_on',
-    'manual_off',
-    'auto_on',
-    'auto_off',
-    'outage',
-    'restore',
-    'threshold_breach',
-  ];
-
   const now = Date.now();
 
   for (let i = 0; i < count; i++) {
-    const type = eventTypes[Math.floor(Math.random() * eventTypes.length)];
-    const timestamp = now - i * 3600000 - Math.random() * 3600000; // Spread over last N hours
+    const type = MOCK_EVENT_TYPES[Math.floor(Math.random() * MOCK_EVENT_TYPES.length)];
+    const timestamp = now - i * 3_600_000 - Math.random() * 3_600_000;
 
-    let description = '';
     let duration: number | undefined;
-
-    switch (type) {
-      case 'manual_on':
-        description = 'Circuit breaker turned ON manually';
-        break;
-      case 'manual_off':
-        description = 'Circuit breaker turned OFF manually';
-        break;
-      case 'auto_on':
-        description = 'Circuit breaker automatically turned ON';
-        break;
-      case 'auto_off':
-        description = 'Circuit breaker automatically turned OFF';
-        break;
-      case 'outage':
-        description = 'Power outage detected';
-        duration = Math.floor(Math.random() * 1800000) + 300000; // 5-35 minutes
-        break;
-      case 'restore':
-        description = 'Power restored';
-        break;
-      case 'threshold_breach':
-        description = 'Voltage threshold exceeded';
-        break;
+    if (type === 'outage') {
+      duration = Math.floor(Math.random() * 1_800_000) + 300_000;
     }
+
+    const descriptionKey = EVENT_DESCRIPTION_MAP[type];
+    const description = i18n.t(descriptionKey);
 
     events.push({
       id: `event-${i}-${timestamp}`,
@@ -164,7 +166,6 @@ export const generateMockEvents = (count: number = 20): Event[] => {
     });
   }
 
-  // Sort by timestamp (newest first)
   return events.sort((a, b) => b.timestamp - a.timestamp);
 };
 
@@ -172,25 +173,32 @@ export const generateMockEvents = (count: number = 20): Event[] => {
  * Get event icon name based on type
  * Returns proper Ionicons name type
  */
-export const getEventIcon = (type: EventType):
-  'power' | 'power-off' | 'auto-fix' | 'alert-circle' | 'check-circle' | 'alert' | 'information' => {
+export const getEventIcon = (type: EventType): IoniconName => {
   switch (type) {
     case 'manual_on':
       return 'power';
     case 'manual_off':
-      return 'power-off';
+      return 'power-outline';
     case 'auto_on':
-      return 'auto-fix';
+      return 'flash';
     case 'auto_off':
-      return 'auto-fix';
+      return 'flash-off';
     case 'outage':
-      return 'alert-circle';
+      return 'warning-outline';
     case 'restore':
-      return 'check-circle';
+      return 'checkmark-circle-outline';
     case 'threshold_breach':
-      return 'alert';
+      return 'analytics-outline';
+    case 'overvoltage':
+      return 'arrow-up-circle-outline';
+    case 'undervoltage':
+      return 'arrow-down-circle-outline';
+    case 'overcurrent':
+      return 'speedometer-outline';
+    case 'overload':
+      return 'warning';
     default:
-      return 'information';
+      return 'information-circle-outline';
   }
 };
 
@@ -208,10 +216,18 @@ export const getEventColor = (type: EventType): string => {
     case 'auto_off':
       return '#FFA726'; // Orange
     case 'outage':
-      return '#EF5350'; // Red
+    case 'overvoltage':
+    case 'overcurrent':
+    case 'overload':
+      return '#EF5350'; // Red - Critical safety events
+    case 'undervoltage':
+      return '#FFA726'; // Orange - Warning
     case 'threshold_breach':
       return '#FFA726'; // Orange
     default:
       return '#42A5F5'; // Blue
   }
 };
+
+
+

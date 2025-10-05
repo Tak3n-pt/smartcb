@@ -1,8 +1,9 @@
-// Status Bar Component
+﻿// Status Bar Component
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useThemeStore } from '../../store';
 import { colors, typography, spacing } from '../../theme';
 import { getRelativeTime } from '../../utils';
@@ -20,6 +21,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   lastEventTime,
   lastEventDescription,
 }) => {
+  const { t } = useTranslation();
   const { theme } = useThemeStore();
   const themeColors = colors[theme];
 
@@ -30,6 +32,10 @@ export const StatusBar: React.FC<StatusBarProps> = ({
     if (signalStrength > 25) return 'wifi';
     return 'wifi-outline';
   };
+
+  const connectionLabel = isConnected
+    ? t('home.connectionStatus.connected')
+    : t('home.connectionStatus.disconnected');
 
   return (
     <View style={[styles.container, { backgroundColor: themeColors.surface }]}>
@@ -48,7 +54,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
             },
           ]}
         >
-          {isConnected ? 'Connected' : 'Disconnected'}
+          {connectionLabel}
         </Text>
       </View>
 
@@ -61,7 +67,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
             color={themeColors.text.secondary}
           />
           <Text style={[styles.eventText, { color: themeColors.text.secondary }]}>
-            {lastEventDescription} • {getRelativeTime(lastEventTime)}
+            {`${lastEventDescription} · ${getRelativeTime(lastEventTime)}`}
           </Text>
         </View>
       )}

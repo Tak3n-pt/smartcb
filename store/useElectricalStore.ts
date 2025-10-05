@@ -7,21 +7,24 @@ import { generateMockElectricalData } from '../utils';
 interface ElectricalStore {
   data: ElectricalData | null;
   connection: ConnectionStatus;
+  isDemoMode: boolean;
 
   // Actions
   updateData: (data: ElectricalData) => void;
   toggleRelay: () => void;
   setConnected: (isConnected: boolean) => void;
+  setDemoMode: (isDemoMode: boolean) => void;
   incrementEnergy: () => void;
 }
 
 export const useElectricalStore = create<ElectricalStore>((set) => ({
   data: generateMockElectricalData(true),
   connection: {
-    isConnected: true,
+    isConnected: false,
     lastUpdate: Date.now(),
-    signalStrength: 85,
+    signalStrength: 0,
   },
+  isDemoMode: true,
 
   updateData: (data) =>
     set((state) => ({
@@ -54,7 +57,14 @@ export const useElectricalStore = create<ElectricalStore>((set) => ({
         ...state.connection,
         isConnected,
         lastUpdate: Date.now(),
+        signalStrength: isConnected ? 85 : 0,
       },
+      isDemoMode: !isConnected,
+    })),
+
+  setDemoMode: (isDemoMode) =>
+    set(() => ({
+      isDemoMode,
     })),
 
   incrementEnergy: () =>

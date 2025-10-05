@@ -7,6 +7,8 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
+import '../i18n'; // Initialize i18n
+import { useLanguageStore } from '../store';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -15,17 +17,23 @@ export {
 
 export const unstable_settings = {
   // Ensure that reloading on `/modal` keeps a back button present.
-  initialRouteName: '(tabs)',
+  initialRouteName: 'welcome',
 };
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  const { language, setLanguage } = useLanguageStore();
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
     ...FontAwesome.font,
   });
+
+  // Initialize language on app start
+  useEffect(() => {
+    setLanguage(language);
+  }, []);
 
   // Expo Router uses Error Boundaries to catch errors in the navigation tree.
   useEffect(() => {
@@ -49,7 +57,9 @@ function RootLayoutNav() {
   return (
     <>
       <StatusBar style="light" />
-      <Stack>
+      <Stack initialRouteName="welcome">
+        <Stack.Screen name="welcome" options={{ headerShown: false }} />
+        <Stack.Screen name="link-device" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       </Stack>
     </>

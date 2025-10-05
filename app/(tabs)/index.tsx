@@ -5,6 +5,7 @@ import { ScrollView, View, Text, StyleSheet, TouchableOpacity, Image } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useElectricalStore, useThemeStore } from '../../store';
 import { useMockData } from '../../hooks/useMockData';
 import {
@@ -17,7 +18,6 @@ import { Toggle } from '../../components/ui';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 import {
   formatPower,
-  formatEnergy,
   formatFrequency,
   formatPowerFactor,
 } from '../../utils';
@@ -26,16 +26,17 @@ export default function HomeScreen() {
   // Initialize mock data updates
   useMockData();
 
-  const { data, connection, toggleRelay } = useElectricalStore();
+  const { data, connection, toggleRelay, isDemoMode } = useElectricalStore();
   const { theme } = useThemeStore();
   const themeColors = colors[theme];
+  const { t } = useTranslation();
 
   if (!data) {
     return (
       <SafeAreaView
         style={[styles.container, { backgroundColor: themeColors.background }]}
       >
-        <Text style={{ color: themeColors.text.primary }}>Loading...</Text>
+        <Text style={{ color: themeColors.text.primary }}>{t('common.loading')}</Text>
       </SafeAreaView>
     );
   }
@@ -64,72 +65,102 @@ export default function HomeScreen() {
           </Link>
         </View>
 
-        {/* Logo Section */}
-        <View style={[
-          styles.logoSection,
-          {
-            backgroundColor: themeColors.surfaceElevated
-          }
-        ]}>
+        {/* Demo Mode Indicator */}
+        {isDemoMode && (
+          <View
+            style={[
+              styles.demoModeBanner,
+              { backgroundColor: themeColors.warning + '20' },
+            ]}
+          >
+            <View style={styles.demoModeContent}>
+              <View style={styles.demoModeLeft}>
+                <Ionicons
+                  name="information-circle"
+                  size={20}
+                  color={themeColors.warning}
+                />
+                <Text
+                  style={[styles.demoModeText, { color: themeColors.warning }]}
+                >
+                  {t('home.connectionStatus.demoMode')}
+                </Text>
+              </View>
+              <Link href="/link-device" asChild>
+                <TouchableOpacity
+                  style={[
+                    styles.connectButton,
+                    { backgroundColor: themeColors.warning },
+                  ]}
+                >
+                  <Text style={[styles.connectButtonText, { color: '#FFFFFF' }]}>
+                    {t('home.connectionStatus.connectButton')}
+                  </Text>
+                </TouchableOpacity>
+              </Link>
+            </View>
+          </View>
+        )}
+
+        {/* Logo */}
+        <View style={styles.logoContainer}>
           <Image
             source={require('../../assets/images/logo.png')}
             style={[
               styles.logo,
-              theme === 'dark' && { tintColor: '#FFFFFF' }  // Make logo white in dark mode
+              theme === 'dark' && { tintColor: '#FFFFFF' },
             ]}
             resizeMode="contain"
           />
         </View>
 
-        {/* Main Voltage Gauge */}
+        {/* Circuit Breaker Toggle */}
+        <View style={styles.toggleSection}>
+          <Toggle
+            value={data.relayState}
+            onToggle={toggleRelay}
+            label={t('home.relayControl.title')}
+            size="large"
+          />
+        </View>
+
+        {/* Power Consumption */}
+        <View style={styles.metricCardWrapper}>
+          <MetricCard
+            icon="flash"
+            label={t('home.readings.power')}
+            value={formatPower(data.power)}
+            color={themeColors.warning}
+          />
+        </View>
+
+        {/* Voltage */}
         <View style={styles.gaugeSection}>
           <VoltageGauge voltage={data.voltage} />
         </View>
 
-        {/* Current Meter */}
+        {/* Current */}
         <View style={styles.section}>
           <CurrentMeter current={data.current} maxCurrent={16} />
         </View>
 
-        {/* Metrics Cards Row 1 */}
-        <View style={styles.metricsRow}>
-          <MetricCard
-            icon="flash"
-            label="Power"
-            value={formatPower(data.power)}
-            color={themeColors.warning}
-          />
-          <MetricCard
-            icon="battery-charging"
-            label="Energy"
-            value={formatEnergy(data.energy)}
-            color={themeColors.success}
-          />
-        </View>
-
-        {/* Metrics Cards Row 2 */}
-        <View style={styles.metricsRow}>
-          <MetricCard
-            icon="pulse"
-            label="Frequency"
-            value={formatFrequency(data.frequency)}
-            color={themeColors.info}
-          />
+        {/* Power Factor */}
+        <View style={styles.metricCardWrapper}>
           <MetricCard
             icon="stats-chart"
-            label="Power Factor"
+            label={t('home.readings.powerFactor')}
             value={formatPowerFactor(data.powerFactor)}
             color={themeColors.info}
           />
         </View>
 
-        {/* Circuit Breaker Toggle */}
-        <View style={styles.section}>
-          <Toggle
-            value={data.relayState}
-            onToggle={toggleRelay}
-            label="Circuit Breaker"
-            size="large"
+        {/* Frequency */}
+        <View style={styles.metricCardWrapper}>
+          <MetricCard
+            icon="pulse"
+            label={t('home.readings.frequency')}
+            value={formatFrequency(data.frequency)}
+            color={themeColors.info}
           />
         </View>
 
@@ -140,7 +171,7 @@ export default function HomeScreen() {
             signalStrength={connection.signalStrength}
             lastEventTime={data.timestamp}
             lastEventDescription={
-              data.relayState ? 'Circuit breaker ON' : 'Circuit breaker OFF'
+              data.relayState ? t('home.relayControl.turnedOn') : t('home.relayControl.turnedOff')
             }
           />
         </View>
@@ -159,7 +190,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingTop: spacing.md,
     paddingHorizontal: spacing.md,
-    paddingBottom: spacing.xxl, // Extra padding for tab bar
+    paddingBottom: spacing.xxl,
   },
   topBar: {
     flexDirection: 'row',
@@ -167,24 +198,45 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.md,
   },
-  logoSection: {
+  demoModeBanner: {
+    borderRadius: borderRadius.medium,
+    padding: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  demoModeContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.xl,
-    borderRadius: borderRadius.xlarge,
+  },
+  demoModeLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  demoModeText: {
+    ...typography.bodySmall,
+    fontWeight: '600',
+    marginLeft: spacing.sm,
+  },
+  connectButton: {
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.medium,
+  },
+  connectButtonText: {
+    ...typography.bodySmall,
+    fontWeight: '600',
+  },
+  logoContainer: {
+    alignItems: 'center',
     marginBottom: spacing.lg,
-    height: 180,
-    position: 'relative',
   },
   logo: {
     width: 140,
     height: 140,
-    zIndex: 2,
   },
-  logoGlow: {
-    position: 'absolute',
-    borderRadius: 100,
-    backgroundColor: '#4A90E2',  // Soft blue glow that complements the logo
+  toggleSection: {
+    marginBottom: spacing.lg,
   },
   gaugeSection: {
     alignItems: 'center',
@@ -193,9 +245,7 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: spacing.lg,
   },
-  metricsRow: {
-    flexDirection: 'row',
+  metricCardWrapper: {
     marginBottom: spacing.lg,
-    marginHorizontal: -spacing.xs,
   },
 });

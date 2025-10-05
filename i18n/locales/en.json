@@ -1,0 +1,420 @@
+{
+  "common": {
+    "appName": "SmartCB",
+    "appTagline": "Circuit Protection System",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "done": "Done",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "skip": "Skip",
+    "retry": "Retry",
+    "ok": "OK",
+    "yes": "Yes",
+    "no": "No",
+    "on": "ON",
+    "off": "OFF",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "from": "From",
+    "to": "To",
+    "relativeTime": {
+      "justNow": "Just now",
+      "minute": "{{count}} minute ago",
+      "minutes": "{{count}} minutes ago",
+      "hour": "{{count}} hour ago",
+      "hours": "{{count}} hours ago",
+      "day": "{{count}} day ago",
+      "days": "{{count}} days ago"
+    },
+    "months": {
+      "short": {
+        "jan": "Jan",
+        "feb": "Feb",
+        "mar": "Mar",
+        "apr": "Apr",
+        "may": "May",
+        "jun": "Jun",
+        "jul": "Jul",
+        "aug": "Aug",
+        "sep": "Sep",
+        "oct": "Oct",
+        "nov": "Nov",
+        "dec": "Dec"
+      }
+    },
+    "dateFormats": {
+      "short": "{{month}} {{day}}, {{year}}"
+    },
+    "timeFormats": {
+      "short": "{{hour}}:{{minute}} {{period}}"
+    },
+    "timePeriods": {
+      "am": "AM",
+      "pm": "PM"
+    },
+    "duration": {
+      "hour": "{{count}} hour",
+      "hours": "{{count}} hours",
+      "minute": "{{count}} minute",
+      "minutes": "{{count}} minutes",
+      "second": "{{count}} second",
+      "seconds": "{{count}} seconds",
+      "shortHour": "{{count}}h",
+      "shortMinute": "{{count}}m",
+      "shortSecond": "{{count}}s"
+    }
+  },
+  "welcome": {
+    "title": "Welcome to SmartCB",
+    "subtitle": "A refined control center for your intelligent circuit breaker, delivering clarity, control, and peace of mind.",
+    "getStarted": "Get Started",
+    "footerText": "Seamless energy management at your fingertips.",
+    "features": {
+      "liveMonitoring": {
+        "title": "Live Monitoring",
+        "description": "Track voltage, current, and power metrics in real time with responsive alerts."
+      },
+      "safetyAutomation": {
+        "title": "Safety Automation",
+        "description": "Smart relay control reacts instantly to protect your equipment from electrical faults."
+      },
+      "insightfulAnalytics": {
+        "title": "Insightful Analytics",
+        "description": "Understand consumption trends and optimize energy usage with clear visual dashboards."
+      }
+    }
+  },
+  "linkDevice": {
+    "title": "Link Your Device",
+    "subtitle": "Connect your SmartCB circuit breaker to start monitoring",
+    "connectionMethods": "Connection Methods",
+    "bluetooth": {
+      "title": "Bluetooth Connection",
+      "description": "Connect directly via Bluetooth for quick setup",
+      "button": "Connect via Bluetooth",
+      "scanning": "Scanning for devices...",
+      "found": "Device found!",
+      "scanButton": "Scan for Devices",
+      "changeDevice": "Change Device",
+      "tips": {
+        "power": "Make sure your ESP32 is powered on",
+        "enable": "Enable Bluetooth on your phone",
+        "distance": "Stay within 10 meters of the device"
+      }
+    },
+    "wifi": {
+      "title": "WiFi Connection",
+      "description": "Connect over your local network for stable connection",
+      "button": "Connect via WiFi",
+      "ipAddress": "ESP32 IP Address",
+      "port": "Port",
+      "connect": "Connect",
+      "tips": {
+        "network": "Connect to the same WiFi network",
+        "ip": "Enter your ESP32 device IP address",
+        "port": "Default port is usually 80 or 8080"
+      }
+    },
+    "status": {
+      "scanning": "Scanning for devices...",
+      "connecting": "Connecting to ESP32...",
+      "connected": "Connected successfully!",
+      "failed": "Connection failed. Please try again."
+    },
+    "buttons": {
+      "connecting": "Connecting...",
+      "scanning": "Scanning...",
+      "scanAndConnect": "Scan & Connect",
+      "connect": "Connect"
+    },
+    "help": "Having trouble connecting?",
+    "modal": {
+      "title": "Available Devices",
+      "scanning": "Scanning for devices...",
+      "noDevices": "No devices found"
+    },
+    "demoMode": "Continue in Demo Mode",
+    "goBack": "Go Back"
+  },
+  "home": {
+    "title": "Dashboard",
+    "connectionStatus": {
+      "connected": "Connected",
+      "disconnected": "Disconnected",
+      "demoMode": "Demo Mode - Using Mock Data",
+      "connectButton": "Connect"
+    },
+    "relayControl": {
+      "title": "Relay Control",
+      "turnOn": "Turn ON",
+      "turnOff": "Turn OFF",
+      "status": "Status",
+      "turnedOn": "Circuit breaker ON",
+      "turnedOff": "Circuit breaker OFF"
+    },
+    "readings": {
+      "voltage": "Voltage",
+      "current": "Current",
+      "power": "Power",
+      "energy": "Energy",
+      "frequency": "Frequency",
+      "powerFactor": "Power Factor",
+      "apparentPower": "Apparent Power",
+      "reactivePower": "Reactive Power"
+    },
+    "units": {
+      "voltage": "V",
+      "current": "A",
+      "power": "W",
+      "energy": "kWh",
+      "frequency": "Hz",
+      "apparentPower": "VA",
+      "reactivePower": "VAR",
+      "powerKilowatt": "kW"
+    },
+    "quickActions": "Quick Actions",
+    "viewEvents": "View Events",
+    "viewAnalytics": "View Analytics"
+  },
+  "events": {
+    "title": "Event Log & Analytics",
+    "consumption": {
+      "title": "Energy Consumption",
+      "views": {
+        "hourly": "Hourly",
+        "daily": "Daily",
+        "weekly": "Weekly",
+        "monthly": "Monthly"
+      },
+      "total": "Total",
+      "average": "Average",
+      "dateRange": "Date Range",
+      "weekLabel": "Week {{count}}",
+      "weekAbbreviation": "W{{count}}",
+      "daysOfWeek": {
+        "monday": "Mon",
+        "tuesday": "Tue",
+        "wednesday": "Wed",
+        "thursday": "Thu",
+        "friday": "Fri",
+        "saturday": "Sat",
+        "sunday": "Sun"
+      },
+      "monthsShort": {
+        "jan": "Jan",
+        "feb": "Feb",
+        "mar": "Mar",
+        "apr": "Apr",
+        "may": "May",
+        "jun": "Jun",
+        "jul": "Jul",
+        "aug": "Aug",
+        "sep": "Sep",
+        "oct": "Oct",
+        "nov": "Nov",
+        "dec": "Dec"
+      }
+    },
+    "graphs": {
+      "title": "Parameter Trends",
+      "subtitle": "Analyze electrical parameters over time",
+      "voltage": {
+        "title": "Voltage Trend",
+        "safeRange": "Safe Range: 200V - 240V"
+      },
+      "current": {
+        "title": "Current Trend",
+        "safeLimit": "Safe Limit: {{value}}{{unit}} maximum"
+      },
+      "power": {
+        "title": "Power Consumption"
+      },
+      "stats": {
+        "max": "Max",
+        "min": "Min",
+        "avg": "Avg",
+        "peak": "Peak",
+        "low": "Low"
+      },
+      "breakdown": {
+        "hourly": "24-Hour Breakdown",
+        "daily": "Daily Breakdown",
+        "weekly": "Weekly Breakdown",
+        "monthly": "Monthly Breakdown"
+      }
+    },
+    "dateFilter": {
+      "title": "Event Date Range",
+      "from": "From",
+      "to": "To"
+    },
+    "safetyFilter": {
+      "title": "Safety Events Filter",
+      "clearAll": "Clear All Filters",
+      "types": {
+        "overvoltage": "Overvoltage",
+        "undervoltage": "Undervoltage",
+        "overcurrent": "Overcurrent",
+        "overload": "Overload",
+        "outage": "Outage"
+      }
+    },
+    "statistics": {
+      "title": "System Events",
+      "totalEvents": "Total Events",
+      "outages": "Outages",
+      "avgDuration": "Avg Duration"
+    },
+    "eventsList": {
+      "title": "Events",
+      "empty": "No events found",
+      "types": {
+        "manualOn": "Circuit breaker turned ON manually",
+        "manualOff": "Circuit breaker turned OFF manually",
+        "autoOn": "Circuit breaker automatically turned ON",
+        "autoOff": "Circuit breaker automatically turned OFF",
+        "outage": "Power outage detected",
+        "restore": "Power restored",
+        "thresholdBreach": "Threshold exceeded",
+        "overvoltage": "Overvoltage detected",
+        "undervoltage": "Undervoltage detected",
+        "overcurrent": "Overcurrent detected",
+        "overload": "Overload detected"
+      }
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "tabs": {
+      "limits": "Limits",
+      "alerts": "Alerts",
+      "timer": "Timer",
+      "system": "System"
+    },
+    "thresholds": {
+      "voltage": {
+        "title": "Voltage Protection",
+        "max": "Maximum Voltage",
+        "min": "Minimum Voltage",
+        "placeholder": "Enter voltage"
+      },
+      "current": {
+        "title": "Current Protection",
+        "max": "Maximum Current",
+        "enable": "Enable Current Protection",
+        "placeholder": "Enter current"
+      },
+      "frequency": {
+        "title": "Frequency Protection",
+        "max": "Maximum Frequency",
+        "min": "Minimum Frequency",
+        "enable": "Frequency Protection",
+        "placeholder": "Enter frequency"
+      },
+      "powerFactor": {
+        "title": "Power Factor",
+        "min": "Minimum Power Factor",
+        "enable": "Power Factor Protection",
+        "placeholder": "Enter power factor",
+        "unit": "PF"
+      },
+      "energy": {
+        "title": "Energy Limit",
+        "max": "Maximum Energy",
+        "enable": "Enable Energy Limit",
+        "resetDaily": "Reset Daily",
+        "placeholder": "Enter energy limit"
+      },
+      "reconnection": {
+        "title": "Auto-Reconnection",
+        "subtitle": "Expected Turn-on Time",
+        "delay": "Reconnection Delay",
+        "delayUnit": "seconds",
+        "maxAttempts": "Maximum Attempts",
+        "enable": "Enable Auto-Reconnection",
+        "placeholder": "Enter delay"
+      }
+    },
+    "notifications": {
+      "title": "Notification Settings",
+      "powerOutage": "Power Outage Alerts",
+      "powerRestore": "Power Restore Alerts",
+      "thresholdBreach": "Threshold Breach Alerts",
+      "deviceOffline": "Device Offline Alerts",
+      "sound": "Sound",
+      "vibration": "Vibration",
+      "alertsTitle": "Alert Types",
+      "preferencesTitle": "Notification Preferences"
+    },
+    "schedule": {
+      "title": "Automatic Schedule",
+      "subtitle": "Set automatic ON/OFF times",
+      "enable": "Schedule Enabled",
+      "onTime": "Turn ON at",
+      "offTime": "Turn OFF at",
+      "days": "Active Days",
+      "daysOfWeek": {
+        "sunday": "Sun",
+        "monday": "Mon",
+        "tuesday": "Tue",
+        "wednesday": "Wed",
+        "thursday": "Thu",
+        "friday": "Fri",
+        "saturday": "Sat"
+      }
+    },
+    "system": {
+      "title": "System Information",
+      "device": {
+        "title": "Device",
+        "name": "Device Name",
+        "firmware": "Firmware Version"
+      },
+      "network": {
+        "title": "Network",
+        "wifi": "WiFi Network",
+        "signal": "Signal Strength",
+        "signalStrength": "Signal"
+      },
+      "app": {
+        "title": "Application",
+        "version": "App Version",
+        "theme": "Theme",
+        "language": "Language",
+        "dark": "Dark",
+        "light": "Light"
+      },
+      "languages": {
+        "english": "English",
+        "arabic": "العربية"
+      },
+      "actions": {
+        "resetDefaults": "Reset to Defaults",
+        "exportSettings": "Export Settings",
+        "about": "About SmartCB"
+      }
+    }
+  },
+  "dev": {
+    "editScreen": {
+      "openCode": "Open up the code for this screen:",
+      "changeText": "Change any of the text, save the file, and your app will automatically update.",
+      "linkText": "Tap here if your app doesn't automatically update after making changes"
+    }
+  },
+  "modal": {
+    "title": "Developer Info"
+  },
+  "notFound": {
+    "header": "Oops!",
+    "message": "This screen doesn't exist.",
+    "cta": "Go to home screen!"
+  }
+}

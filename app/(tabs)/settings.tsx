@@ -12,7 +12,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useSettingsStore, useThemeStore } from '../../store';
+import { useTranslation } from 'react-i18next';
+import { useSettingsStore, useThemeStore, useLanguageStore } from '../../store';
 import { Card } from '../../components/ui';
 import { colors, typography, spacing, borderRadius } from '../../theme';
 
@@ -22,7 +23,9 @@ export default function SettingsScreen() {
   const { settings, updateThresholds, updateNotifications, updateSchedule } =
     useSettingsStore();
   const { theme, toggleTheme } = useThemeStore();
+  const { language, setLanguage } = useLanguageStore();
   const themeColors = colors[theme];
+  const { t } = useTranslation();
 
   const [activeTab, setActiveTab] = useState<SettingsTab>('thresholds');
 
@@ -54,7 +57,7 @@ export default function SettingsScreen() {
             },
           ]}
         >
-          Limits
+          {t('settings.tabs.limits')}
         </Text>
       </TouchableOpacity>
 
@@ -83,7 +86,7 @@ export default function SettingsScreen() {
             },
           ]}
         >
-          Alerts
+          {t('settings.tabs.alerts')}
         </Text>
       </TouchableOpacity>
 
@@ -112,7 +115,7 @@ export default function SettingsScreen() {
             },
           ]}
         >
-          Timer
+          {t('settings.tabs.timer')}
         </Text>
       </TouchableOpacity>
 
@@ -141,7 +144,7 @@ export default function SettingsScreen() {
             },
           ]}
         >
-          Info
+          {t('settings.tabs.system')}
         </Text>
       </TouchableOpacity>
     </View>
@@ -152,12 +155,12 @@ export default function SettingsScreen() {
     <View>
       <Card style={styles.card}>
         <Text style={[styles.cardTitle, { color: themeColors.text.primary }]}>
-          Voltage Protection
+          {t('settings.thresholds.voltage.title')}
         </Text>
 
         <View style={styles.settingRow}>
           <Text style={[styles.label, { color: themeColors.text.secondary }]}>
-            Maximum Voltage
+            {t('settings.thresholds.voltage.max')}
           </Text>
           <View style={styles.inputContainer}>
             <TextInput
@@ -179,14 +182,14 @@ export default function SettingsScreen() {
               }}
             />
             <Text style={[styles.unit, { color: themeColors.text.secondary }]}>
-              V
+              {t('home.units.voltage')}
             </Text>
           </View>
         </View>
 
         <View style={styles.settingRow}>
           <Text style={[styles.label, { color: themeColors.text.secondary }]}>
-            Minimum Voltage
+            {t('settings.thresholds.voltage.min')}
           </Text>
           <View style={styles.inputContainer}>
             <TextInput
@@ -208,7 +211,7 @@ export default function SettingsScreen() {
               }}
             />
             <Text style={[styles.unit, { color: themeColors.text.secondary }]}>
-              V
+              {t('home.units.voltage')}
             </Text>
           </View>
         </View>
@@ -216,12 +219,12 @@ export default function SettingsScreen() {
 
       <Card style={styles.card}>
         <Text style={[styles.cardTitle, { color: themeColors.text.primary }]}>
-          Current Protection
+          {t('settings.thresholds.current.title')}
         </Text>
 
         <View style={styles.settingRow}>
           <Text style={[styles.label, { color: themeColors.text.secondary }]}>
-            Maximum Current
+            {t('settings.thresholds.current.max')}
           </Text>
           <View style={styles.inputContainer}>
             <TextInput
@@ -243,14 +246,14 @@ export default function SettingsScreen() {
               }}
             />
             <Text style={[styles.unit, { color: themeColors.text.secondary }]}>
-              A
+              {t('home.units.current')}
             </Text>
           </View>
         </View>
 
         <View style={styles.settingRow}>
           <Text style={[styles.label, { color: themeColors.text.secondary }]}>
-            Protection Enabled
+            {t('settings.thresholds.current.enable')}
           </Text>
           <Switch
             value={settings.thresholds.current.enabled}
@@ -270,12 +273,12 @@ export default function SettingsScreen() {
 
       <Card style={styles.card}>
         <Text style={[styles.cardTitle, { color: themeColors.text.primary }]}>
-          Energy Limit
+          {t('settings.thresholds.energy.title')}
         </Text>
 
         <View style={styles.settingRow}>
           <Text style={[styles.label, { color: themeColors.text.secondary }]}>
-            Maximum Energy
+            {t('settings.thresholds.energy.max')}
           </Text>
           <View style={styles.inputContainer}>
             <TextInput
@@ -297,14 +300,14 @@ export default function SettingsScreen() {
               }}
             />
             <Text style={[styles.unit, { color: themeColors.text.secondary }]}>
-              kWh
+              {t('home.units.energy')}
             </Text>
           </View>
         </View>
 
         <View style={styles.settingRow}>
           <Text style={[styles.label, { color: themeColors.text.secondary }]}>
-            Energy Limit Enabled
+            {t('settings.thresholds.energy.enable')}
           </Text>
           <Switch
             value={settings.thresholds.energy.enabled}
@@ -324,12 +327,12 @@ export default function SettingsScreen() {
 
       <Card style={styles.card}>
         <Text style={[styles.cardTitle, { color: themeColors.text.primary }]}>
-          Frequency Protection
+          {t('settings.thresholds.frequency.title')}
         </Text>
 
         <View style={styles.settingRow}>
           <Text style={[styles.label, { color: themeColors.text.secondary }]}>
-            Minimum Frequency
+            {t('settings.thresholds.frequency.min')}
           </Text>
           <View style={styles.inputContainer}>
             <TextInput
@@ -351,14 +354,14 @@ export default function SettingsScreen() {
               }}
             />
             <Text style={[styles.unit, { color: themeColors.text.secondary }]}>
-              Hz
+              {t('home.units.frequency')}
             </Text>
           </View>
         </View>
 
         <View style={styles.settingRow}>
           <Text style={[styles.label, { color: themeColors.text.secondary }]}>
-            Maximum Frequency
+            {t('settings.thresholds.frequency.max')}
           </Text>
           <View style={styles.inputContainer}>
             <TextInput
@@ -380,14 +383,14 @@ export default function SettingsScreen() {
               }}
             />
             <Text style={[styles.unit, { color: themeColors.text.secondary }]}>
-              Hz
+              {t('home.units.frequency')}
             </Text>
           </View>
         </View>
 
         <View style={styles.settingRow}>
           <Text style={[styles.label, { color: themeColors.text.secondary }]}>
-            Frequency Protection
+            {t('settings.thresholds.frequency.enable')}
           </Text>
           <Switch
             value={settings.thresholds.frequency.enabled}
@@ -407,12 +410,12 @@ export default function SettingsScreen() {
 
       <Card style={styles.card}>
         <Text style={[styles.cardTitle, { color: themeColors.text.primary }]}>
-          Power Factor Protection
+          {t('settings.thresholds.powerFactor.title')}
         </Text>
 
         <View style={styles.settingRow}>
           <Text style={[styles.label, { color: themeColors.text.secondary }]}>
-            Minimum Power Factor
+            {t('settings.thresholds.powerFactor.min')}
           </Text>
           <View style={styles.inputContainer}>
             <TextInput
@@ -434,14 +437,14 @@ export default function SettingsScreen() {
               }}
             />
             <Text style={[styles.unit, { color: themeColors.text.secondary }]}>
-              PF
+              {t('settings.thresholds.powerFactor.unit')}
             </Text>
           </View>
         </View>
 
         <View style={styles.settingRow}>
           <Text style={[styles.label, { color: themeColors.text.secondary }]}>
-            PF Protection Enabled
+            {t('settings.thresholds.powerFactor.enable')}
           </Text>
           <Switch
             value={settings.thresholds.powerFactor.enabled}
@@ -461,12 +464,12 @@ export default function SettingsScreen() {
 
       <Card style={styles.card}>
         <Text style={[styles.cardTitle, { color: themeColors.text.primary }]}>
-          Reconnection Settings
+          {t('settings.thresholds.reconnection.title')}
         </Text>
 
         <View style={styles.settingRow}>
           <Text style={[styles.label, { color: themeColors.text.secondary }]}>
-            Reconnection Delay
+            {t('settings.thresholds.reconnection.delay')}
           </Text>
           <View style={styles.inputContainer}>
             <TextInput
@@ -482,7 +485,7 @@ export default function SettingsScreen() {
               keyboardType="numeric"
             />
             <Text style={[styles.unit, { color: themeColors.text.secondary }]}>
-              sec
+              {t('settings.thresholds.reconnection.delayUnit')}
             </Text>
           </View>
         </View>
@@ -495,12 +498,12 @@ export default function SettingsScreen() {
     <View>
       <Card style={styles.card}>
         <Text style={[styles.cardTitle, { color: themeColors.text.primary }]}>
-          Alert Types
+          {t('settings.notifications.alertsTitle')}
         </Text>
 
         <View style={styles.settingRow}>
           <Text style={[styles.label, { color: themeColors.text.secondary }]}>
-            Power Outage
+            {t('settings.notifications.powerOutage')}
           </Text>
           <Switch
             value={settings.notifications.powerOutage}
@@ -517,7 +520,7 @@ export default function SettingsScreen() {
 
         <View style={styles.settingRow}>
           <Text style={[styles.label, { color: themeColors.text.secondary }]}>
-            Power Restore
+            {t('settings.notifications.powerRestore')}
           </Text>
           <Switch
             value={settings.notifications.powerRestore}
@@ -534,7 +537,7 @@ export default function SettingsScreen() {
 
         <View style={styles.settingRow}>
           <Text style={[styles.label, { color: themeColors.text.secondary }]}>
-            Threshold Breach
+            {t('settings.notifications.thresholdBreach')}
           </Text>
           <Switch
             value={settings.notifications.thresholdBreach}
@@ -551,7 +554,7 @@ export default function SettingsScreen() {
 
         <View style={styles.settingRow}>
           <Text style={[styles.label, { color: themeColors.text.secondary }]}>
-            Device Offline
+            {t('settings.notifications.deviceOffline')}
           </Text>
           <Switch
             value={settings.notifications.deviceOffline}
@@ -569,12 +572,12 @@ export default function SettingsScreen() {
 
       <Card style={styles.card}>
         <Text style={[styles.cardTitle, { color: themeColors.text.primary }]}>
-          Notification Settings
+          {t('settings.notifications.preferencesTitle')}
         </Text>
 
         <View style={styles.settingRow}>
           <Text style={[styles.label, { color: themeColors.text.secondary }]}>
-            Sound
+            {t('settings.notifications.sound')}
           </Text>
           <Switch
             value={settings.notifications.sound}
@@ -589,7 +592,7 @@ export default function SettingsScreen() {
 
         <View style={styles.settingRow}>
           <Text style={[styles.label, { color: themeColors.text.secondary }]}>
-            Vibration
+            {t('settings.notifications.vibration')}
           </Text>
           <Switch
             value={settings.notifications.vibration}
@@ -606,98 +609,97 @@ export default function SettingsScreen() {
   );
 
   // Schedule Tab
-  const renderScheduleTab = () => (
-    <View>
-      <Card style={styles.card}>
-        <Text style={[styles.cardTitle, { color: themeColors.text.primary }]}>
-          Daily Schedule
-        </Text>
+  const renderScheduleTab = () => {
+    const dayOptions = [
+      { index: 0, label: t('settings.schedule.daysOfWeek.sunday') },
+      { index: 1, label: t('settings.schedule.daysOfWeek.monday') },
+      { index: 2, label: t('settings.schedule.daysOfWeek.tuesday') },
+      { index: 3, label: t('settings.schedule.daysOfWeek.wednesday') },
+      { index: 4, label: t('settings.schedule.daysOfWeek.thursday') },
+      { index: 5, label: t('settings.schedule.daysOfWeek.friday') },
+      { index: 6, label: t('settings.schedule.daysOfWeek.saturday') },
+    ];
 
-        <View style={styles.settingRow}>
-          <Text style={[styles.label, { color: themeColors.text.secondary }]}>
-            Schedule Enabled
-          </Text>
-          <Switch
-            value={settings.schedule.enabled}
-            onValueChange={(value) => updateSchedule({ enabled: value })}
-            trackColor={{
-              false: themeColors.border,
-              true: themeColors.success,
-            }}
-            thumbColor="white"
-          />
-        </View>
+    const toggleDay = (dayIndex: number) => {
+      const includesDay = settings.schedule.days.includes(dayIndex);
+      const updatedDays = includesDay
+        ? settings.schedule.days.filter((d) => d !== dayIndex)
+        : [...settings.schedule.days, dayIndex];
 
-        <View style={styles.settingRow}>
-          <Text style={[styles.label, { color: themeColors.text.secondary }]}>
-            ON Time
-          </Text>
-          <Text style={[styles.value, { color: themeColors.text.primary }]}>
-            {settings.schedule.onTime}
-          </Text>
-        </View>
+      updateSchedule({ days: updatedDays.sort((a, b) => a - b) });
+    };
 
-        <View style={styles.settingRow}>
-          <Text style={[styles.label, { color: themeColors.text.secondary }]}>
-            OFF Time
-          </Text>
-          <Text style={[styles.value, { color: themeColors.text.primary }]}>
-            {settings.schedule.offTime}
-          </Text>
-        </View>
-      </Card>
+    return (
+      <View>
+        <Card style={styles.card}>
+          <Text style={[styles.cardTitle, { color: themeColors.text.primary }]}>{t('settings.schedule.title')}</Text>
 
-      <Card style={styles.card}>
-        <Text style={[styles.cardTitle, { color: themeColors.text.primary }]}>
-          Active Days
-        </Text>
-        <View style={styles.daysContainer}>
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(
-            (day, index) => (
-              <TouchableOpacity
-                key={day}
-                style={[
-                  styles.dayButton,
-                  {
-                    backgroundColor: settings.schedule.days.includes(index)
-                      ? themeColors.primary
-                      : themeColors.background,
-                    borderColor: themeColors.border,
-                  },
-                ]}
-                onPress={() => {
-                  const newDays = settings.schedule.days.includes(index)
-                    ? settings.schedule.days.filter((d) => d !== index)
-                    : [...settings.schedule.days, index];
-                  updateSchedule({ days: newDays });
-                }}
-              >
-                <Text
+          <View style={styles.settingRow}>
+            <Text style={[styles.label, { color: themeColors.text.secondary }]}>{t('settings.schedule.enable')}</Text>
+            <Switch
+              value={settings.schedule.enabled}
+              onValueChange={(value) => updateSchedule({ enabled: value })}
+              trackColor={{
+                false: themeColors.border,
+                true: themeColors.success,
+              }}
+              thumbColor="white"
+            />
+          </View>
+
+          <View style={styles.settingRow}>
+            <Text style={[styles.label, { color: themeColors.text.secondary }]}>{t('settings.schedule.onTime')}</Text>
+            <Text style={[styles.value, { color: themeColors.text.primary }]}>{settings.schedule.onTime}</Text>
+          </View>
+
+          <View style={styles.settingRow}>
+            <Text style={[styles.label, { color: themeColors.text.secondary }]}>{t('settings.schedule.offTime')}</Text>
+            <Text style={[styles.value, { color: themeColors.text.primary }]}>{settings.schedule.offTime}</Text>
+          </View>
+        </Card>
+
+        <Card style={styles.card}>
+          <Text style={[styles.cardTitle, { color: themeColors.text.primary }]}>{t('settings.schedule.days')}</Text>
+          <View style={styles.daysContainer}>
+            {dayOptions.map(({ index, label }) => {
+              const isSelected = settings.schedule.days.includes(index);
+              return (
+                <TouchableOpacity
+                  key={label}
                   style={[
-                    styles.dayText,
+                    styles.dayButton,
                     {
-                      color: settings.schedule.days.includes(index)
-                        ? 'white'
-                        : themeColors.text.secondary,
+                      backgroundColor: isSelected
+                        ? themeColors.primary
+                        : themeColors.background,
+                      borderColor: themeColors.border,
                     },
                   ]}
+                  onPress={() => toggleDay(index)}
                 >
-                  {day}
-                </Text>
-              </TouchableOpacity>
-            )
-          )}
-        </View>
-      </Card>
-    </View>
-  );
+                  <Text
+                    style={[
+                      styles.dayText,
+                      { color: isSelected ? 'white' : themeColors.text.secondary },
+                    ]}
+                  >
+                    {label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </Card>
+      </View>
+    );
+  };
 
   // System Tab
   const renderSystemTab = () => (
     <View>
       <Card style={styles.card}>
         <Text style={[styles.cardTitle, { color: themeColors.text.primary }]}>
-          Appearance
+          {t('settings.system.app.title')}
         </Text>
 
         <View style={styles.settingRow}>
@@ -713,7 +715,7 @@ export default function SettingsScreen() {
                 { color: themeColors.text.secondary, marginLeft: spacing.sm },
               ]}
             >
-              Dark Mode
+              {t('settings.system.app.theme')}
             </Text>
           </View>
           <Switch
@@ -726,16 +728,71 @@ export default function SettingsScreen() {
             thumbColor="white"
           />
         </View>
+
+        {/* Language Selector */}
+        <View style={styles.settingRow}>
+          <View style={styles.labelWithIcon}>
+            <Ionicons
+              name="language"
+              size={20}
+              color={themeColors.text.secondary}
+            />
+            <Text
+              style={[
+                styles.label,
+                { color: themeColors.text.secondary, marginLeft: spacing.sm },
+              ]}
+            >
+              {t('settings.system.app.language')}
+            </Text>
+          </View>
+          <View style={styles.languageButtons}>
+            <TouchableOpacity
+              style={[
+                styles.languageButton,
+                {
+                  backgroundColor: language === 'en' ? themeColors.primary : themeColors.background,
+                  borderColor: themeColors.border,
+                }
+              ]}
+              onPress={() => setLanguage('en')}
+            >
+              <Text style={[
+                styles.languageButtonText,
+                { color: language === 'en' ? themeColors.text.inverse : themeColors.text.secondary }
+              ]}>
+                {t('settings.system.languages.english')}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.languageButton,
+                {
+                  backgroundColor: language === 'ar' ? themeColors.primary : themeColors.background,
+                  borderColor: themeColors.border,
+                }
+              ]}
+              onPress={() => setLanguage('ar')}
+            >
+              <Text style={[
+                styles.languageButtonText,
+                { color: language === 'ar' ? themeColors.text.inverse : themeColors.text.secondary }
+              ]}>
+                العربية
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </Card>
 
       <Card style={styles.card}>
         <Text style={[styles.cardTitle, { color: themeColors.text.primary }]}>
-          WiFi Configuration
+          {t('settings.system.network.title')}
         </Text>
 
         <View style={styles.settingRow}>
           <Text style={[styles.label, { color: themeColors.text.secondary }]}>
-            Network
+            {t('settings.system.network.wifi')}
           </Text>
           <Text style={[styles.value, { color: themeColors.text.primary }]}>
             {settings.wifi.ssid}
@@ -744,7 +801,7 @@ export default function SettingsScreen() {
 
         <View style={styles.settingRow}>
           <Text style={[styles.label, { color: themeColors.text.secondary }]}>
-            Signal Strength
+            {t('settings.system.network.signalStrength')}
           </Text>
           <Text style={[styles.value, { color: themeColors.text.primary }]}>
             {settings.wifi.signalStrength}%
@@ -754,12 +811,12 @@ export default function SettingsScreen() {
 
       <Card style={styles.card}>
         <Text style={[styles.cardTitle, { color: themeColors.text.primary }]}>
-          Device Information
+          {t('settings.system.device.title')}
         </Text>
 
         <View style={styles.settingRow}>
           <Text style={[styles.label, { color: themeColors.text.secondary }]}>
-            Device Name
+            {t('settings.system.device.name')}
           </Text>
           <Text style={[styles.value, { color: themeColors.text.primary }]}>
             {settings.device.name}
@@ -768,7 +825,7 @@ export default function SettingsScreen() {
 
         <View style={styles.settingRow}>
           <Text style={[styles.label, { color: themeColors.text.secondary }]}>
-            Firmware Version
+            {t('settings.system.device.firmware')}
           </Text>
           <Text style={[styles.value, { color: themeColors.text.primary }]}>
             {settings.device.firmwareVersion}
@@ -786,7 +843,7 @@ export default function SettingsScreen() {
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: themeColors.border }]}>
         <Text style={[styles.headerTitle, { color: themeColors.text.primary }]}>
-          Settings
+          {t('settings.title')}
         </Text>
       </View>
 
@@ -862,6 +919,22 @@ const styles = StyleSheet.create({
   labelWithIcon: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  languageButtons: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  languageButton: {
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.medium,
+    borderWidth: 1,
+    minWidth: 80,
+    alignItems: 'center',
+  },
+  languageButtonText: {
+    ...typography.bodySmall,
+    fontWeight: '600',
   },
   value: {
     ...typography.body,
