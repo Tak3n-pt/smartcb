@@ -1,13 +1,15 @@
 // Welcome Screen
 
 import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { colors, spacing, typography, borderRadius, shadows } from '../theme';
 import { useThemeStore } from '../store';
+
+const { height: screenHeight } = Dimensions.get('window');
 
 export default function WelcomeScreen() {
   const router = useRouter();
@@ -63,11 +65,7 @@ export default function WelcomeScreen() {
         />
       </View>
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+      <View style={styles.container}>
         <View style={styles.hero}>
           <View
             style={[
@@ -161,7 +159,7 @@ export default function WelcomeScreen() {
             </Text>
           </View>
         </View>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -189,21 +187,21 @@ const styles = StyleSheet.create({
     bottom: -160,
     left: -120,
   },
-  scrollView: {
+  container: {
     flex: 1,
-  },
-  scrollContent: {
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.xl,
-    flexGrow: 1,
+    paddingVertical: spacing.md,
+    justifyContent: 'space-between',
   },
   hero: {
     alignItems: 'center',
+    flex: 0.35,
+    justifyContent: 'center',
   },
   logoWrapper: {
-    width: 168,
-    height: 168,
-    borderRadius: 168,
+    width: screenHeight < 700 ? 100 : 120,
+    height: screenHeight < 700 ? 100 : 120,
+    borderRadius: 100,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.lg,
@@ -221,46 +219,53 @@ const styles = StyleSheet.create({
   },
   title: {
     ...typography.h1,
+    fontSize: screenHeight < 700 ? 24 : 28,
     textAlign: 'center',
   },
   subtitle: {
     ...typography.body,
+    fontSize: screenHeight < 700 ? 13 : 14,
     textAlign: 'center',
-    marginTop: spacing.sm,
-    maxWidth: 360,
+    marginTop: spacing.xs,
+    maxWidth: 320,
+    lineHeight: screenHeight < 700 ? 18 : 20,
   },
   featureList: {
-    marginTop: spacing.xl,
+    flex: 0.45,
+    justifyContent: 'center',
   },
   featureCard: {
-    borderRadius: borderRadius.large,
-    padding: spacing.md,
-    marginBottom: spacing.md,
+    borderRadius: borderRadius.medium,
+    padding: screenHeight < 700 ? spacing.sm : spacing.md,
+    marginBottom: screenHeight < 700 ? spacing.xs : spacing.sm,
     borderWidth: 1,
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
   },
   featureIconWrapper: {
-    width: 48,
-    height: 48,
+    width: screenHeight < 700 ? 36 : 40,
+    height: screenHeight < 700 ? 36 : 40,
     borderRadius: borderRadius.round,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.md,
+    marginRight: spacing.sm,
   },
   featureContent: {
     flex: 1,
   },
   featureTitle: {
     ...typography.h4,
-    marginBottom: spacing.xs,
+    fontSize: screenHeight < 700 ? 14 : 16,
+    marginBottom: 2,
   },
   featureDescription: {
     ...typography.bodySmall,
-    lineHeight: 20,
+    fontSize: screenHeight < 700 ? 11 : 12,
+    lineHeight: screenHeight < 700 ? 16 : 18,
   },
   footer: {
-    marginTop: spacing.xl,
+    flex: 0.2,
+    justifyContent: 'center',
   },
   primaryButton: {
     borderRadius: borderRadius.large,

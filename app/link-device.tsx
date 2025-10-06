@@ -1,4 +1,4 @@
-// ESP32 Connection Screen - Bluetooth & WiFi
+// ESP32 Connection Screen - WiFi Only
 
 import React, { useState, useEffect, useRef } from 'react';
 import {
@@ -11,9 +11,7 @@ import {
   Animated,
   TextInput,
   ActivityIndicator,
-  Dimensions,
-  Modal,
-  FlatList
+  Dimensions
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -23,84 +21,11 @@ import { colors, spacing, typography, borderRadius, shadows } from '../theme';
 import { useThemeStore, useElectricalStore } from '../store';
 
 type ThemePalette = (typeof colors)['light'];
-type ConnectionMethod = 'bluetooth' | 'wifi';
-type ConnectionStatus = 'idle' | 'scanning' | 'connecting' | 'connected' | 'failed';
+type ConnectionStatus = 'idle' | 'connecting' | 'connected' | 'failed';
 
 const { width: screenWidth } = Dimensions.get('window');
 
-// Mock Bluetooth devices for demo
-const mockBluetoothDevices = [
-  { id: '1', name: 'SmartCB-ESP32-001', rssi: -45, address: 'AA:BB:CC:DD:EE:FF' },
-  { id: '2', name: 'SmartCB-ESP32-002', rssi: -62, address: 'FF:EE:DD:CC:BB:AA' },
-  { id: '3', name: 'ESP32-DevKit', rssi: -78, address: '11:22:33:44:55:66' },
-];
-
-interface DeviceItemProps {
-  device: typeof mockBluetoothDevices[0];
-  onPress: () => void;
-  themeColors: ThemePalette;
-  isSelected: boolean;
-}
-
-function DeviceItem({ device, onPress, themeColors, isSelected }: DeviceItemProps) {
-  const signalStrength = device.rssi > -50 ? 'strong' : device.rssi > -70 ? 'medium' : 'weak';
-  const signalColor = signalStrength === 'strong' ? themeColors.success :
-                      signalStrength === 'medium' ? themeColors.warning :
-                      themeColors.text.disabled;
-
-  return (
-    <TouchableOpacity
-      activeOpacity={0.7}
-      onPress={onPress}
-      style={[
-        styles.deviceItem,
-        {
-          backgroundColor: isSelected ? themeColors.primaryLight : themeColors.surface,
-          borderColor: isSelected ? themeColors.primary : themeColors.border,
-        }
-      ]}
-    >
-      <View style={styles.deviceIcon}>
-        <MaterialCommunityIcons
-          name="chip"
-          size={24}
-          color={isSelected ? themeColors.primary : themeColors.text.secondary}
-        />
-      </View>
-
-      <View style={styles.deviceInfo}>
-        <Text style={[styles.deviceName, { color: themeColors.text.primary }]}>
-          {device.name}
-        </Text>
-        <Text style={[styles.deviceAddress, { color: themeColors.text.secondary }]}>
-          {device.address}
-        </Text>
-      </View>
-
-      <View style={styles.deviceSignal}>
-        <View style={styles.signalBars}>
-          {[1, 2, 3].map((bar) => (
-            <View
-              key={bar}
-              style={[
-                styles.signalBar,
-                {
-                  backgroundColor: bar <= (signalStrength === 'strong' ? 3 : signalStrength === 'medium' ? 2 : 1)
-                    ? signalColor
-                    : themeColors.text.disabled,
-                  height: bar * 5 + 5,
-                }
-              ]}
-            />
-          ))}
-        </View>
-        <Text style={[styles.rssiText, { color: themeColors.text.secondary }]}>
-          {device.rssi} dBm
-        </Text>
-      </View>
-    </TouchableOpacity>
-  );
-}
+// WiFi-only connection - removed Bluetooth components
 
 export default function LinkDeviceScreen() {
   const router = useRouter();
@@ -110,25 +35,17 @@ export default function LinkDeviceScreen() {
   const { t } = useTranslation();
 
   // Connection tips
-  const bluetoothTips = [
-    t('linkDevice.bluetooth.tips.power'),
-    t('linkDevice.bluetooth.tips.enable'),
-    t('linkDevice.bluetooth.tips.distance'),
-  ];
-
   const wifiTips = [
     t('linkDevice.wifi.tips.network'),
     t('linkDevice.wifi.tips.ip'),
     t('linkDevice.wifi.tips.port'),
   ];
 
-  const [connectionMethod, setConnectionMethod] = useState<ConnectionMethod>('bluetooth');
+  // WiFi connection state only
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('idle');
-  const [selectedDevice, setSelectedDevice] = useState<typeof mockBluetoothDevices[0] | null>(null);
   const [wifiIP, setWifiIP] = useState('192.168.1.100');
   const [wifiPort, setWifiPort] = useState('80');
-  const [showDeviceList, setShowDeviceList] = useState(false);
-  const [foundDevices, setFoundDevices] = useState<typeof mockBluetoothDevices>([]);
+  const [isDetecting, setIsDetecting] = useState(false);
 
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
@@ -170,27 +87,31 @@ export default function LinkDeviceScreen() {
     }
   }, [connectionStatus]);
 
-  const handleBluetoothScan = () => {
-    setConnectionStatus('scanning');
-    setShowDeviceList(true);
+  const handleAutoDetect = () => {
+    setIsDetecting(true);
 
-    // Simulate device discovery
+    // Common ESP32 IP addresses to try
+    const commonIPs = [
+      '192.168.1.100',
+      '192.168.0.100',
+      '192.168.4.1',    // ESP32 Access Point default
+      '192.168.1.10',
+      '192.168.0.10',
+      '10.0.0.100',
+    ];
+
+    // Simulate detection process
     setTimeout(() => {
-      setFoundDevices(mockBluetoothDevices);
-      setConnectionStatus('idle');
-    }, 2000);
-  };
-
-  const handleDeviceSelect = (device: typeof mockBluetoothDevices[0]) => {
-    setSelectedDevice(device);
-    setShowDeviceList(false);
+      // In a real app, you would try to ping or connect to these IPs
+      // For demo, randomly select one
+      const randomIndex = Math.floor(Math.random() * commonIPs.length);
+      setWifiIP(commonIPs[randomIndex]);
+      setIsDetecting(false);
+    }, 1500);
   };
 
   const handleConnect = () => {
-    if (connectionMethod === 'bluetooth' && !selectedDevice) {
-      handleBluetoothScan();
-      return;
-    }
+    // WiFi connection only
 
     setConnectionStatus('connecting');
 
@@ -205,13 +126,6 @@ export default function LinkDeviceScreen() {
     }, 3000);
   };
 
-  const handleMethodChange = (method: ConnectionMethod) => {
-    setConnectionMethod(method);
-    setConnectionStatus('idle');
-    setSelectedDevice(null);
-    setFoundDevices([]);
-  };
-
   const spin = rotateAnim.interpolate({
     inputRange: [0, 1],
     outputRange: ['0deg', '360deg'],
@@ -222,11 +136,7 @@ export default function LinkDeviceScreen() {
       edges={['top', 'bottom']}
       style={[styles.container, { backgroundColor: themeColors.background }]}
     >
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
+      <View style={styles.content}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
@@ -253,7 +163,6 @@ export default function LinkDeviceScreen() {
             </View>
             <View style={styles.logoTextContainer}>
               <Text style={[styles.appName, { color: themeColors.primary }]}>{t('common.appName')}</Text>
-              <Text style={[styles.appTagline, { color: themeColors.text.secondary }]}>{t('linkDevice.subtitle')}</Text>
             </View>
           </View>
 
@@ -265,105 +174,38 @@ export default function LinkDeviceScreen() {
           </Text>
         </View>
 
-        {/* Connection Method Selector with ESP32 Branding */}
+        {/* WiFi Connection Card */}
         <View style={styles.methodSelector}>
           <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={() => handleMethodChange('bluetooth')}
             style={[
               styles.methodCard,
-              connectionMethod === 'bluetooth' && styles.methodCardActive,
+              styles.methodCardActive,
               {
-                backgroundColor: connectionMethod === 'bluetooth'
-                  ? themeColors.primaryLight
-                  : themeColors.surface,
-                borderColor: connectionMethod === 'bluetooth'
-                  ? themeColors.primary
-                  : themeColors.border,
+                backgroundColor: themeColors.primaryLight,
+                borderColor: themeColors.primary,
               }
             ]}
           >
             {/* ESP32 Visual Badge */}
             <View style={[styles.esp32Badge, {
-              backgroundColor: connectionMethod === 'bluetooth'
-                ? themeColors.primary
-                : themeColors.text.disabled
-            }]}>
-              <Text style={styles.esp32Text}>ESP32</Text>
-            </View>
-
-            <Animated.View style={{ transform: [{ scale: connectionMethod === 'bluetooth' ? pulseAnim : 1 }] }}>
-              <View style={[styles.methodIconContainer, {
-                backgroundColor: connectionMethod === 'bluetooth'
-                  ? 'rgba(33, 150, 243, 0.1)'
-                  : 'transparent'
-              }]}>
-                <Ionicons
-                  name="bluetooth"
-                  size={32}
-                  color={connectionMethod === 'bluetooth' ? themeColors.primary : themeColors.text.secondary}
-                />
-              </View>
-            </Animated.View>
-
-            <Text style={[
-              styles.methodTitle,
-              { color: connectionMethod === 'bluetooth' ? themeColors.primary : themeColors.text.primary }
-            ]}>
-              {t('linkDevice.bluetooth.title')}
-            </Text>
-            <Text style={[styles.methodDescription, { color: themeColors.text.secondary }]}>
-              {t('linkDevice.bluetooth.description')}
-            </Text>
-
-            {/* ESP32 Module Visual */}
-            <View style={styles.moduleVisual}>
-              <View style={[styles.moduleDot, { backgroundColor: themeColors.success }]} />
-              <View style={[styles.moduleDot, { backgroundColor: themeColors.warning }]} />
-              <View style={[styles.moduleDot, { backgroundColor: themeColors.primary }]} />
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={() => handleMethodChange('wifi')}
-            style={[
-              styles.methodCard,
-              connectionMethod === 'wifi' && styles.methodCardActive,
-              {
-                backgroundColor: connectionMethod === 'wifi'
-                  ? themeColors.primaryLight
-                  : themeColors.surface,
-                borderColor: connectionMethod === 'wifi'
-                  ? themeColors.primary
-                  : themeColors.border,
-              }
-            ]}
-          >
-            {/* ESP32 Visual Badge */}
-            <View style={[styles.esp32Badge, {
-              backgroundColor: connectionMethod === 'wifi'
-                ? themeColors.primary
-                : themeColors.text.disabled
+              backgroundColor: themeColors.primary
             }]}>
               <Text style={styles.esp32Text}>ESP32</Text>
             </View>
 
             <View style={[styles.methodIconContainer, {
-              backgroundColor: connectionMethod === 'wifi'
-                ? 'rgba(33, 150, 243, 0.1)'
-                : 'transparent'
+              backgroundColor: 'rgba(33, 150, 243, 0.1)'
             }]}>
               <Ionicons
                 name="wifi"
-                size={32}
-                color={connectionMethod === 'wifi' ? themeColors.primary : themeColors.text.secondary}
+                size={24}
+                color={themeColors.primary}
               />
             </View>
 
             <Text style={[
               styles.methodTitle,
-              { color: connectionMethod === 'wifi' ? themeColors.primary : themeColors.text.primary }
+              { color: themeColors.primary }
             ]}>
               {t('linkDevice.wifi.title')}
             </Text>
@@ -380,87 +222,49 @@ export default function LinkDeviceScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Connection Configuration */}
+        {/* WiFi Configuration */}
         <View style={[styles.configSection, { backgroundColor: themeColors.surface }]}>
-          {connectionMethod === 'bluetooth' ? (
-            <>
-              {selectedDevice ? (
-                <View style={styles.selectedDeviceContainer}>
-                  <View style={styles.selectedDeviceHeader}>
-                    <MaterialCommunityIcons name="chip" size={24} color={themeColors.primary} />
-                    <Text style={[styles.selectedDeviceLabel, { color: themeColors.text.secondary }]}>
-                      {t('linkDevice.bluetooth.found')}
-                    </Text>
-                  </View>
-                  <View style={[styles.selectedDeviceInfo, { backgroundColor: themeColors.background }]}>
-                    <Text style={[styles.selectedDeviceName, { color: themeColors.text.primary }]}>
-                      {selectedDevice.name}
-                    </Text>
-                    <Text style={[styles.selectedDeviceAddress, { color: themeColors.text.secondary }]}>
-                      {selectedDevice.address}
-                    </Text>
-                  </View>
-                  <TouchableOpacity
-                    onPress={handleBluetoothScan}
-                    style={styles.changeDeviceButton}
-                  >
-                    <Text style={[styles.changeDeviceText, { color: themeColors.primary }]}>
-                      {t('linkDevice.bluetooth.changeDevice')}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <TouchableOpacity
-                  activeOpacity={0.7}
-                  onPress={handleBluetoothScan}
-                  style={[styles.scanButton, { borderColor: themeColors.primary }]}
-                >
-                  <Ionicons name="search" size={24} color={themeColors.primary} />
-                  <Text style={[styles.scanButtonText, { color: themeColors.primary, marginLeft: spacing.sm }]}>
-                    {t('linkDevice.bluetooth.scanButton')}
-                  </Text>
-                </TouchableOpacity>
-              )}
-
-              {/* Bluetooth Tips */}
-              <View style={styles.tipsContainer}>
-                {bluetoothTips.map((tip, index) => (
-                  <View key={index} style={styles.tipRow}>
-                    <Ionicons
-                      name="checkmark-circle"
-                      size={16}
-                      color={themeColors.success}
-                    />
-                    <Text style={[styles.tipText, { color: themeColors.text.secondary }]}>
-                      {tip}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            </>
-          ) : (
-            <>
               {/* WiFi Configuration */}
               <View style={styles.wifiConfig}>
                 <View style={styles.inputContainer}>
                   <Text style={[styles.inputLabel, { color: themeColors.text.secondary }]}>
                     {t('linkDevice.wifi.ipAddress')}
                   </Text>
-                  <TextInput
-                    style={[
-                      styles.input,
-                      {
-                        backgroundColor: themeColors.background,
-                        color: themeColors.text.primary,
-                        borderColor: themeColors.border,
-                      }
-                    ]}
-                    value={wifiIP}
-                    onChangeText={setWifiIP}
-                    placeholder="192.168.1.100"
-                    placeholderTextColor={themeColors.text.disabled}
-                    keyboardType="numeric"
-                  />
+                  <View style={styles.inputWithButton}>
+                    <TextInput
+                      style={[
+                        styles.input,
+                        styles.inputFlex,
+                        {
+                          backgroundColor: themeColors.background,
+                          color: themeColors.text.primary,
+                          borderColor: themeColors.border,
+                        }
+                      ]}
+                      value={wifiIP}
+                      onChangeText={setWifiIP}
+                      placeholder="192.168.1.100"
+                      placeholderTextColor={themeColors.text.disabled}
+                      keyboardType="numeric"
+                    />
+                    <TouchableOpacity
+                      onPress={handleAutoDetect}
+                      disabled={isDetecting}
+                      style={[
+                        styles.autoDetectButton,
+                        {
+                          backgroundColor: isDetecting ? themeColors.primaryLight : themeColors.primary,
+                          opacity: isDetecting ? 0.6 : 1,
+                        }
+                      ]}
+                    >
+                      {isDetecting ? (
+                        <ActivityIndicator size="small" color="white" />
+                      ) : (
+                        <Ionicons name="search" size={20} color="white" />
+                      )}
+                    </TouchableOpacity>
+                  </View>
                 </View>
 
                 <View style={styles.inputContainer}>
@@ -500,8 +304,6 @@ export default function LinkDeviceScreen() {
                   </View>
                 ))}
               </View>
-            </>
-          )}
         </View>
 
         {/* Connection Status */}
@@ -539,17 +341,13 @@ export default function LinkDeviceScreen() {
             styles.connectButton,
             {
               backgroundColor: themeColors.primary,
-              opacity: connectionStatus === 'connecting' || connectionStatus === 'scanning' ? 0.6 : 1,
+              opacity: connectionStatus === 'connecting' ? 0.6 : 1,
             }
           ]}
         >
           <Text style={[styles.connectButtonText, { color: themeColors.text.inverse }]}>
             {connectionStatus === 'connecting'
               ? t('linkDevice.buttons.connecting')
-              : connectionStatus === 'scanning'
-              ? t('linkDevice.buttons.scanning')
-              : connectionMethod === 'bluetooth' && !selectedDevice
-              ? t('linkDevice.buttons.scanAndConnect')
               : t('linkDevice.buttons.connect')}
           </Text>
         </TouchableOpacity>
@@ -588,56 +386,7 @@ export default function LinkDeviceScreen() {
             {t('linkDevice.help')}
           </Text>
         </TouchableOpacity>
-      </ScrollView>
-
-      {/* Device List Modal */}
-      <Modal
-        visible={showDeviceList}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowDeviceList(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: themeColors.background }]}>
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: themeColors.text.primary }]}>
-                {t('linkDevice.modal.title')}
-              </Text>
-              <TouchableOpacity onPress={() => setShowDeviceList(false)}>
-                <Ionicons name="close" size={24} color={themeColors.text.primary} />
-              </TouchableOpacity>
-            </View>
-
-            {connectionStatus === 'scanning' ? (
-              <View style={styles.scanningContainer}>
-                <ActivityIndicator size="large" color={themeColors.primary} />
-                <Text style={[styles.scanningText, { color: themeColors.text.secondary }]}>
-                  {t('linkDevice.modal.scanning')}
-                </Text>
-              </View>
-            ) : (
-              <FlatList
-                data={foundDevices}
-                keyExtractor={(item) => item.id}
-                renderItem={({ item }) => (
-                  <DeviceItem
-                    device={item}
-                    onPress={() => handleDeviceSelect(item)}
-                    themeColors={themeColors}
-                    isSelected={selectedDevice?.id === item.id}
-                  />
-                )}
-                contentContainerStyle={styles.deviceList}
-                ListEmptyComponent={
-                  <Text style={[styles.emptyText, { color: themeColors.text.secondary }]}>
-                    {t('linkDevice.modal.noDevices')}
-                  </Text>
-                }
-              />
-            )}
-          </View>
-        </View>
-      </Modal>
+      </View>
     </SafeAreaView>
   );
 }
@@ -646,14 +395,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  scrollContent: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.xl,
+  content: {
+    flex: 1,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    justifyContent: 'space-between',
   },
   header: {
     alignItems: 'center',
-    marginTop: spacing.lg,
-    marginBottom: spacing.xl,
+    marginBottom: spacing.sm,
   },
   backButton: {
     position: 'absolute',
@@ -663,51 +413,50 @@ const styles = StyleSheet.create({
   },
   logoSection: {
     alignItems: 'center',
-    marginBottom: spacing.xl,
+    marginBottom: spacing.md,
   },
   logoContainer: {
-    width: 80,
-    height: 80,
+    width: 60,
+    height: 60,
     borderRadius: borderRadius.round,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
   logo: {
-    width: 50,
-    height: 50,
+    width: 35,
+    height: 35,
   },
   logoTextContainer: {
     alignItems: 'center',
   },
   appName: {
-    ...typography.h2,
+    ...typography.h3,
     fontWeight: 'bold',
     letterSpacing: 1,
-    marginBottom: spacing.xs,
   },
   appTagline: {
     ...typography.caption,
     letterSpacing: 0.5,
   },
   title: {
-    ...typography.h2,
+    ...typography.h3,
     marginBottom: spacing.xs,
   },
   subtitle: {
-    ...typography.body,
+    ...typography.bodySmall,
     textAlign: 'center',
   },
   methodSelector: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: spacing.xl,
+    marginBottom: spacing.md,
   },
   methodCard: {
     flex: 1,
     marginHorizontal: spacing.xs,
-    padding: spacing.lg,
+    padding: spacing.md,
     borderRadius: borderRadius.large,
     borderWidth: 2,
     alignItems: 'center',
@@ -732,20 +481,22 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   methodIconContainer: {
-    width: 60,
-    height: 60,
+    width: 50,
+    height: 50,
     borderRadius: borderRadius.round,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
   },
   methodTitle: {
-    ...typography.h3,
+    ...typography.body,
+    fontWeight: 'bold',
     marginBottom: spacing.xs,
   },
   methodDescription: {
     ...typography.caption,
     textAlign: 'center',
+    fontSize: 10,
   },
   moduleVisual: {
     position: 'absolute',
@@ -759,9 +510,9 @@ const styles = StyleSheet.create({
     marginHorizontal: 2,
   },
   configSection: {
-    padding: spacing.lg,
+    padding: spacing.md,
     borderRadius: borderRadius.large,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.sm,
     ...shadows.small,
   },
   scanButton: {
@@ -775,38 +526,6 @@ const styles = StyleSheet.create({
   },
   scanButtonText: {
     ...typography.button,
-  },
-  selectedDeviceContainer: {
-    // gap replaced with margins on children
-  },
-  selectedDeviceHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  selectedDeviceLabel: {
-    ...typography.bodySmall,
-    marginLeft: spacing.sm,
-  },
-  selectedDeviceInfo: {
-    padding: spacing.md,
-    borderRadius: borderRadius.medium,
-    marginTop: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  selectedDeviceName: {
-    ...typography.h3,
-    marginBottom: spacing.xs,
-  },
-  selectedDeviceAddress: {
-    ...typography.caption,
-  },
-  changeDeviceButton: {
-    alignSelf: 'flex-start',
-    paddingVertical: spacing.xs,
-  },
-  changeDeviceText: {
-    ...typography.bodySmall,
-    fontWeight: '600',
   },
   wifiConfig: {
     // gap replaced with margins on children
@@ -826,6 +545,22 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     ...typography.body,
   },
+  inputWithButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    // gap not supported in all React Native versions, use marginLeft on button instead
+  },
+  inputFlex: {
+    flex: 1,
+  },
+  autoDetectButton: {
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.medium,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: spacing.sm,
+  },
   tipsContainer: {
     marginTop: spacing.md,
   },
@@ -843,17 +578,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: spacing.lg,
+    padding: spacing.md,
     borderRadius: borderRadius.large,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.sm,
     ...shadows.small,
   },
   statusText: {
-    ...typography.body,
-    marginLeft: spacing.md,
+    ...typography.bodySmall,
+    marginLeft: spacing.sm,
   },
   connectButton: {
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm,
     borderRadius: borderRadius.large,
     alignItems: 'center',
     ...shadows.medium,
@@ -866,20 +601,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
     borderRadius: borderRadius.large,
     borderWidth: 1,
-    marginTop: spacing.md,
+    marginTop: spacing.sm,
   },
   skipButtonText: {
-    ...typography.button,
+    ...typography.bodySmall,
   },
   helpLink: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: spacing.lg,
+    marginTop: spacing.sm,
   },
   helpText: {
     ...typography.bodySmall,
@@ -910,49 +645,6 @@ const styles = StyleSheet.create({
   },
   deviceList: {
     padding: spacing.lg,
-  },
-  deviceItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.md,
-    borderRadius: borderRadius.medium,
-    borderWidth: 1,
-    marginBottom: spacing.sm,
-  },
-  deviceIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: borderRadius.round,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.md,
-  },
-  deviceInfo: {
-    flex: 1,
-  },
-  deviceName: {
-    ...typography.body,
-    fontWeight: '600',
-  },
-  deviceAddress: {
-    ...typography.caption,
-  },
-  deviceSignal: {
-    alignItems: 'center',
-  },
-  signalBars: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    marginBottom: spacing.xs,
-  },
-  signalBar: {
-    width: 3,
-    borderRadius: 1,
-    marginHorizontal: 1,
-  },
-  rssiText: {
-    ...typography.caption,
-    fontSize: 10,
   },
   scanningContainer: {
     padding: spacing.xxl,

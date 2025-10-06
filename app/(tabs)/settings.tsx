@@ -253,32 +253,7 @@ export default function SettingsScreen() {
 
         <View style={styles.settingRow}>
           <Text style={[styles.label, { color: themeColors.text.secondary }]}>
-            {t('settings.thresholds.current.enable')}
-          </Text>
-          <Switch
-            value={settings.thresholds.current.enabled}
-            onValueChange={(value) =>
-              updateThresholds({
-                current: { ...settings.thresholds.current, enabled: value },
-              })
-            }
-            trackColor={{
-              false: themeColors.border,
-              true: themeColors.success,
-            }}
-            thumbColor="white"
-          />
-        </View>
-      </Card>
-
-      <Card style={styles.card}>
-        <Text style={[styles.cardTitle, { color: themeColors.text.primary }]}>
-          {t('settings.thresholds.energy.title')}
-        </Text>
-
-        <View style={styles.settingRow}>
-          <Text style={[styles.label, { color: themeColors.text.secondary }]}>
-            {t('settings.thresholds.energy.max')}
+            {t('settings.thresholds.current.min', 'Minimum Current')}
           </Text>
           <View style={styles.inputContainer}>
             <TextInput
@@ -290,38 +265,19 @@ export default function SettingsScreen() {
                   borderColor: themeColors.border,
                 },
               ]}
-              value={settings.thresholds.energy.max.toString()}
+              value={settings.thresholds.current.min?.toString() || '0'}
               keyboardType="numeric"
               onChangeText={(text) => {
-                const value = parseInt(text) || settings.thresholds.energy.max;
+                const value = parseFloat(text) || 0;
                 updateThresholds({
-                  energy: { ...settings.thresholds.energy, max: value },
+                  current: { ...settings.thresholds.current, min: value },
                 });
               }}
             />
             <Text style={[styles.unit, { color: themeColors.text.secondary }]}>
-              {t('home.units.energy')}
+              {t('home.units.current')}
             </Text>
           </View>
-        </View>
-
-        <View style={styles.settingRow}>
-          <Text style={[styles.label, { color: themeColors.text.secondary }]}>
-            {t('settings.thresholds.energy.enable')}
-          </Text>
-          <Switch
-            value={settings.thresholds.energy.enabled}
-            onValueChange={(value) =>
-              updateThresholds({
-                energy: { ...settings.thresholds.energy, enabled: value },
-              })
-            }
-            trackColor={{
-              false: themeColors.border,
-              true: themeColors.success,
-            }}
-            thumbColor="white"
-          />
         </View>
       </Card>
 

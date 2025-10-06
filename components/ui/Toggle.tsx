@@ -11,7 +11,7 @@ interface ToggleProps {
   value: boolean;
   onToggle: () => void;
   label?: string;
-  size?: 'small' | 'large';
+  size?: 'small' | 'medium' | 'large';
   disabled?: boolean;
 }
 
@@ -27,6 +27,7 @@ export const Toggle: React.FC<ToggleProps> = ({
   const themeColors = colors[theme];
 
   const isLarge = size === 'large';
+  const isMedium = size === 'medium';
 
   return (
     <TouchableOpacity
@@ -36,6 +37,7 @@ export const Toggle: React.FC<ToggleProps> = ({
       style={[
         styles.container,
         isLarge && styles.containerLarge,
+        isMedium && styles.containerMedium,
         {
           backgroundColor: value ? themeColors.success : themeColors.danger,
         },
@@ -45,14 +47,14 @@ export const Toggle: React.FC<ToggleProps> = ({
       <View style={styles.content}>
         <Ionicons
           name={value ? 'power' : 'power-outline'}
-          size={isLarge ? 48 : 24}
+          size={isLarge ? 48 : isMedium ? 32 : 24}
           color="white"
         />
-        <Text style={[styles.label, isLarge && styles.labelLarge]}>
+        <Text style={[styles.label, isLarge && styles.labelLarge, isMedium && styles.labelMedium]}>
           {t(value ? 'common.on' : 'common.off')}
         </Text>
-        {label && isLarge && (
-          <Text style={styles.sublabel}>{label}</Text>
+        {label && (isLarge || isMedium) && (
+          <Text style={[styles.sublabel, isMedium && styles.sublabelMedium]}>{label}</Text>
         )}
       </View>
     </TouchableOpacity>
@@ -71,6 +73,10 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     minHeight: 100,
   },
+  containerMedium: {
+    padding: spacing.md,
+    minHeight: 80,
+  },
   content: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -85,8 +91,17 @@ const styles = StyleSheet.create({
     ...typography.h2,
     marginTop: spacing.sm,
   },
+  labelMedium: {
+    ...typography.h3,
+    marginTop: spacing.xs,
+  },
   sublabel: {
     ...typography.caption,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginTop: spacing.xs,
+  },
+  sublabelMedium: {
+    ...typography.bodySmall,
     color: 'rgba(255, 255, 255, 0.8)',
     marginTop: spacing.xs,
   },

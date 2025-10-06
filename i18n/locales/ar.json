@@ -24,6 +24,9 @@
     "disabled": "معطّل",
     "from": "من",
     "to": "إلى",
+    "filter": "فلتر",
+    "apply": "تطبيق",
+    "days": "أيام",
     "relativeTime": {
       "justNow": "منذ لحظات",
       "minute": "منذ {{count}} دقيقة",
@@ -153,21 +156,40 @@
     },
     "relayControl": {
       "title": "التحكم بالمرحل",
+      "label": "القاطع",
       "turnOn": "تشغيل",
       "turnOff": "إيقاف",
       "status": "الحالة",
       "turnedOn": "القاطع الكهربائي مُشغّل",
-      "turnedOff": "القاطع الكهربائي مُطفأ"
+      "turnedOff": "القاطع الكهربائي مُطفأ",
+      "tapToToggle": "اضغط للتبديل"
     },
     "readings": {
       "voltage": "الجهد الكهربائي",
       "current": "التيار الكهربائي",
       "power": "الطاقة",
+      "powerLabel": "الطاقة",
       "energy": "الطاقة المستهلكة",
       "frequency": "التردد",
       "powerFactor": "معامل القدرة",
       "apparentPower": "القدرة الظاهرية",
       "reactivePower": "القدرة التفاعلية"
+    },
+    "powerStatus": {
+      "active": "نشط",
+      "idle": "خامل"
+    },
+    "metricStatus": {
+      "normal": "طبيعي",
+      "check": "تحقق",
+      "safe": "آمن",
+      "high": "مرتفع",
+      "stable": "مستقر",
+      "unstable": "غير مستقر",
+      "good": "جيد",
+      "low": "منخفض",
+      "total": "الإجمالي",
+      "activeStatus": "نشط"
     },
     "units": {
       "voltage": "فولت",
@@ -181,21 +203,30 @@
     },
     "quickActions": "إجراءات سريعة",
     "viewEvents": "عرض الأحداث",
-    "viewAnalytics": "عرض التحليلات"
+    "viewAnalytics": "عرض التحليلات",
+    "electricalReadings": "القراءات الكهربائية"
   },
   "events": {
     "title": "سجل الأحداث والتحليلات",
+    "tabs": {
+      "consumption": "تحليل الاستهلاك",
+      "eventLog": "سجل الأحداث"
+    },
     "consumption": {
       "title": "استهلاك الطاقة",
       "views": {
         "hourly": "ساعي",
         "daily": "يومي",
         "weekly": "أسبوعي",
-        "monthly": "شهري"
+        "monthly": "شهري",
+        "custom": "مخصص"
       },
       "total": "الإجمالي",
       "average": "المتوسط",
       "dateRange": "نطاق التاريخ",
+      "hourlyBreakdown": "التفصيل الساعي",
+      "hours": "ساعات",
+      "hourRange": "النطاق الساعي",
       "weekLabel": "الأسبوع {{count}}",
       "weekAbbreviation": "أ{{count}}",
       "daysOfWeek": {
@@ -220,6 +251,23 @@
         "oct": "أكتوبر",
         "nov": "نوفمبر",
         "dec": "ديسمبر"
+      },
+      "datePresets": {
+        "today": "اليوم",
+        "yesterday": "أمس",
+        "last3Days": "آخر 3 أيام",
+        "last7Days": "آخر 7 أيام",
+        "customRange": "أو اختر نطاقًا مخصصًا:"
+      },
+      "hourPresets": {
+        "fullDay": "يوم كامل",
+        "daytime": "النهار",
+        "evening": "المساء",
+        "last3Hours": "آخر 3 ساعات"
+      },
+      "todayIndicator": {
+        "title": "عرض بيانات اليوم",
+        "currentHour": "الساعة الحالية: {{hour}}:00"
       }
     },
     "graphs": {
@@ -308,6 +356,7 @@
       "current": {
         "title": "حماية التيار",
         "max": "أقصى تيار",
+        "min": "أدنى تيار",
         "enable": "تفعيل حماية التيار",
         "placeholder": "أدخل التيار"
       },

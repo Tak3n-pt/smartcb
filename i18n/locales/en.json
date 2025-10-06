@@ -24,6 +24,9 @@
     "disabled": "Disabled",
     "from": "From",
     "to": "To",
+    "filter": "Filter",
+    "apply": "Apply",
+    "days": "days",
     "relativeTime": {
       "justNow": "Just now",
       "minute": "{{count}} minute ago",
@@ -153,21 +156,40 @@
     },
     "relayControl": {
       "title": "Relay Control",
+      "label": "BREAKER",
       "turnOn": "Turn ON",
       "turnOff": "Turn OFF",
       "status": "Status",
       "turnedOn": "Circuit breaker ON",
-      "turnedOff": "Circuit breaker OFF"
+      "turnedOff": "Circuit breaker OFF",
+      "tapToToggle": "Tap to toggle"
     },
     "readings": {
       "voltage": "Voltage",
       "current": "Current",
       "power": "Power",
+      "powerLabel": "POWER",
       "energy": "Energy",
       "frequency": "Frequency",
       "powerFactor": "Power Factor",
       "apparentPower": "Apparent Power",
       "reactivePower": "Reactive Power"
+    },
+    "powerStatus": {
+      "active": "Active",
+      "idle": "Idle"
+    },
+    "metricStatus": {
+      "normal": "Normal",
+      "check": "Check",
+      "safe": "Safe",
+      "high": "High",
+      "stable": "Stable",
+      "unstable": "Unstable",
+      "good": "Good",
+      "low": "Low",
+      "total": "Total",
+      "activeStatus": "Active"
     },
     "units": {
       "voltage": "V",
@@ -181,21 +203,30 @@
     },
     "quickActions": "Quick Actions",
     "viewEvents": "View Events",
-    "viewAnalytics": "View Analytics"
+    "viewAnalytics": "View Analytics",
+    "electricalReadings": "Electrical Readings"
   },
   "events": {
     "title": "Event Log & Analytics",
+    "tabs": {
+      "consumption": "Consumption Analysis",
+      "eventLog": "Event Log"
+    },
     "consumption": {
       "title": "Energy Consumption",
       "views": {
         "hourly": "Hourly",
         "daily": "Daily",
         "weekly": "Weekly",
-        "monthly": "Monthly"
+        "monthly": "Monthly",
+        "custom": "Custom"
       },
       "total": "Total",
       "average": "Average",
       "dateRange": "Date Range",
+      "hourlyBreakdown": "Hourly Breakdown",
+      "hours": "hours",
+      "hourRange": "Hour Range",
       "weekLabel": "Week {{count}}",
       "weekAbbreviation": "W{{count}}",
       "daysOfWeek": {
@@ -220,6 +251,23 @@
         "oct": "Oct",
         "nov": "Nov",
         "dec": "Dec"
+      },
+      "datePresets": {
+        "today": "Today",
+        "yesterday": "Yesterday",
+        "last3Days": "Last 3 Days",
+        "last7Days": "Last 7 Days",
+        "customRange": "Or Choose Custom Range:"
+      },
+      "hourPresets": {
+        "fullDay": "Full Day",
+        "daytime": "Daytime",
+        "evening": "Evening",
+        "last3Hours": "Last 3h"
+      },
+      "todayIndicator": {
+        "title": "Viewing Today's Data",
+        "currentHour": "Current hour: {{hour}}:00"
       }
     },
     "graphs": {
@@ -308,6 +356,7 @@
       "current": {
         "title": "Current Protection",
         "max": "Maximum Current",
+        "min": "Minimum Current",
         "enable": "Enable Current Protection",
         "placeholder": "Enter current"
       },
