@@ -110,16 +110,6 @@ export default function HomeScreen() {
       <View style={styles.mainContent}>
         {/* Header with centered logo */}
         <View style={styles.header}>
-          <Link href="/settings" asChild>
-            <TouchableOpacity style={[styles.headerButton, { backgroundColor: `${themeColors.text.secondary}10` }]}>
-              <Ionicons
-                name="settings-outline"
-                size={22}
-                color={themeColors.text.secondary}
-              />
-            </TouchableOpacity>
-          </Link>
-
           <View style={styles.logoContainer}>
             <Image
               source={require("../../assets/images/logo.png")}
@@ -127,19 +117,9 @@ export default function HomeScreen() {
               resizeMode="contain"
             />
             <Text style={[styles.logoText, { color: themeColors.text.primary }]}>
-              SmartCB
+              {t('common.appName')}
             </Text>
           </View>
-
-          <Link href="/events" asChild>
-            <TouchableOpacity style={[styles.headerButton, { backgroundColor: `${themeColors.text.secondary}10` }]}>
-              <Ionicons
-                name="list-outline"
-                size={22}
-                color={themeColors.text.secondary}
-              />
-            </TouchableOpacity>
-          </Link>
         </View>
 
         {/* Connection Status Pills */}
@@ -171,110 +151,93 @@ export default function HomeScreen() {
               {connection.isConnected ? t('home.connectionStatus.connected') : t('home.connectionStatus.disconnected')}
             </Text>
           </View>
-
-          <View
-            style={[
-              styles.statusPill,
-              {
-                backgroundColor: `${themeColors.info}20`,
-                borderColor: themeColors.info,
-              },
-            ]}
-          >
-            <Ionicons name="time-outline" size={14} color={themeColors.info} />
-            <Text style={[styles.statusText, { color: themeColors.info }]}>
-              {lastUpdatedLabel}
-            </Text>
-          </View>
         </View>
 
-        {/* Main Power Display & Relay Control */}
-        <View style={styles.heroSection}>
-          {/* Power Display Card */}
+        {/* Main Power Display */}
+        <LinearGradient
+          colors={theme === 'dark'
+            ? [themeColors.primary + '20', themeColors.primary + '10']
+            : [themeColors.primary + '15', themeColors.primary + '05']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.powerCard}
+        >
+          <View style={styles.powerHeader}>
+            <MaterialCommunityIcons
+              name="lightning-bolt"
+              size={24}
+              color={themeColors.primary}
+            />
+          </View>
+          <Text style={[styles.powerLabel, { color: themeColors.text.secondary }]}>
+            {t('home.readings.powerLabel')}
+          </Text>
+          <Text style={[styles.powerValue, { color: themeColors.primary }]}>
+            {formatPower(data.power)}
+          </Text>
+          <View style={styles.powerStatus}>
+            <View style={[
+              styles.powerIndicator,
+              { backgroundColor: data.power > 0 ? themeColors.success : themeColors.text.secondary }
+            ]} />
+            <Text style={[styles.powerStatusText, { color: themeColors.text.secondary }]}>
+              {data.power > 0 ? t('home.powerStatus.active') : t('home.powerStatus.idle')}
+            </Text>
+          </View>
+        </LinearGradient>
+
+        {/* Relay Control - Premium Design */}
+        <Pressable
+          onPress={toggleRelay}
+          style={({ pressed }) => [
+            styles.relayControlButton,
+            {
+              transform: [{ scale: pressed ? 0.97 : 1 }],
+            }
+          ]}
+        >
           <LinearGradient
-            colors={theme === 'dark'
-              ? [themeColors.primary + '20', themeColors.primary + '10']
-              : [themeColors.primary + '15', themeColors.primary + '05']}
+            colors={data.relayState
+              ? ['#10B981', '#059669']
+              : ['#374151', '#1F2937']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={styles.powerCard}
+            style={styles.relayGradient}
           >
-            <View style={styles.powerHeader}>
-              <MaterialCommunityIcons
-                name="lightning-bolt"
-                size={24}
-                color={themeColors.primary}
-              />
-            </View>
-            <Text style={[styles.powerLabel, { color: themeColors.text.secondary }]}>
-              {t('home.readings.powerLabel')}
-            </Text>
-            <Text style={[styles.powerValue, { color: themeColors.primary }]}>
-              {formatPower(data.power)}
-            </Text>
-            <View style={styles.powerStatus}>
+            <View style={styles.relayContent}>
+              <View style={styles.relayLeft}>
+                <View style={[
+                  styles.relayIconContainer,
+                  { backgroundColor: data.relayState ? '#FFFFFF20' : '#FFFFFF15' }
+                ]}>
+                  <MaterialCommunityIcons
+                    name={data.relayState ? "power" : "power-off"}
+                    size={26}
+                    color="#FFFFFF"
+                  />
+                </View>
+                <View>
+                  <Text style={styles.relayTitle}>{t('home.relayControl.powerRelay')}</Text>
+                  <Text style={styles.relayStatus}>
+                    {data.relayState ? t('common.active') : t('common.inactive')}
+                  </Text>
+                </View>
+              </View>
+
               <View style={[
-                styles.powerIndicator,
-                { backgroundColor: data.power > 0 ? themeColors.success : themeColors.text.secondary }
-              ]} />
-              <Text style={[styles.powerStatusText, { color: themeColors.text.secondary }]}>
-                {data.power > 0 ? t('home.powerStatus.active') : t('home.powerStatus.idle')}
-              </Text>
+                styles.relayBadge,
+                { backgroundColor: data.relayState ? '#FFFFFF' : '#FFFFFF20' }
+              ]}>
+                <Text style={[
+                  styles.relayBadgeText,
+                  { color: data.relayState ? '#059669' : '#FFFFFF' }
+                ]}>
+                  {data.relayState ? t('common.on') : t('common.off')}
+                </Text>
+              </View>
             </View>
           </LinearGradient>
-
-          {/* Relay Control Card - Beautiful Button Design */}
-          <View style={[styles.relayCard, { backgroundColor: themeColors.surface }]}>
-            <Text style={[styles.relayLabel, { color: themeColors.text.secondary }]}>
-              {t('home.relayControl.label')}
-            </Text>
-
-            <Pressable
-              onPress={toggleRelay}
-              style={({ pressed }) => [
-                styles.relayButton,
-                {
-                  backgroundColor: data.relayState ? themeColors.success : themeColors.surface,
-                  borderColor: data.relayState ? themeColors.success : themeColors.danger,
-                  transform: [{ scale: pressed ? 0.95 : 1 }],
-                  shadowColor: data.relayState ? themeColors.success : themeColors.danger,
-                  elevation: data.relayState ? 8 : 4,
-                }
-              ]}
-            >
-              <LinearGradient
-                colors={data.relayState
-                  ? [themeColors.success, themeColors.success + 'DD']
-                  : ['transparent', 'transparent']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.relayButtonGradient}
-              >
-                <MaterialCommunityIcons
-                  name={data.relayState ? "power-plug" : "power-plug-off"}
-                  size={36}
-                  color={data.relayState ? '#FFFFFF' : themeColors.danger}
-                />
-                <Text style={[
-                  styles.relayButtonText,
-                  {
-                    color: data.relayState ? '#FFFFFF' : themeColors.text.primary,
-                    fontWeight: 'bold'
-                  }
-                ]}>
-                  {data.relayState ? "ON" : "OFF"}
-                </Text>
-              </LinearGradient>
-            </Pressable>
-
-            <Text style={[
-              styles.relayHelpText,
-              { color: themeColors.text.secondary }
-            ]}>
-              {t('home.relayControl.tapToToggle')}
-            </Text>
-          </View>
-        </View>
+        </Pressable>
 
         {/* Electrical Metrics Grid - Modern Clear Cards */}
         <View style={styles.metricsContainer}>
@@ -368,21 +331,12 @@ const styles = StyleSheet.create({
 
   // Header Styles
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: spacing.sm,
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    borderRadius: borderRadius.round,
     alignItems: "center",
     justifyContent: "center",
+    marginBottom: spacing.sm,
   },
   logoContainer: {
     alignItems: "center",
-    flex: 1,
   },
   logo: {
     width: 45,
@@ -425,21 +379,13 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  // Hero Section (Power & Relay)
-  heroSection: {
-    flexDirection: "row",
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-    flex: 0.35,
-  },
-
-  // Power Card
+  // Power Card - Full Width
   powerCard: {
-    flex: 1,
     padding: spacing.md,
     borderRadius: borderRadius.medium,
     alignItems: "center",
     justifyContent: "center",
+    marginBottom: spacing.sm,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -476,68 +422,82 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
 
-  // Relay Card - Professional Button
-  relayCard: {
-    flex: 1,
-    padding: spacing.md,
-    borderRadius: borderRadius.medium,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  relayLabel: {
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 1,
-    marginBottom: 8,
-  },
-  relayButton: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    borderWidth: 2.5,
+  // Relay Control - Premium Gradient
+  relayControlButton: {
+    marginBottom: spacing.md,
+    borderRadius: borderRadius.large,
     overflow: 'hidden',
-    marginVertical: 8,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 6,
   },
-  relayButtonGradient: {
-    flex: 1,
+  relayGradient: {
+    borderRadius: borderRadius.large,
+  },
+  relayContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.md + 2,
+    paddingHorizontal: spacing.md + 4,
+  },
+  relayLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  relayIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  relayButtonText: {
-    fontSize: 16,
-    marginTop: 4,
+  relayTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: '#FFFFFF',
     letterSpacing: 0.5,
   },
-  relayHelpText: {
-    fontSize: 10,
-    fontWeight: "500",
+  relayStatus: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: '#FFFFFFBB',
+    marginTop: 2,
+    letterSpacing: 0.8,
+  },
+  relayBadge: {
+    paddingHorizontal: spacing.md + 2,
+    paddingVertical: spacing.xs + 2,
+    borderRadius: borderRadius.large,
+    minWidth: 56,
+    alignItems: 'center',
+  },
+  relayBadgeText: {
+    fontSize: 15,
+    fontWeight: "800",
+    letterSpacing: 1.2,
   },
 
   // Metrics Section - Professional Cards
   metricsContainer: {
-    flex: 0.65,
+    flex: 1,
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "600",
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
   },
   metricsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: spacing.sm,
+    gap: spacing.xs,
     flex: 1,
   },
   metricCard: {
-    width: "31%",
+    width: "31.5%",
     borderRadius: borderRadius.medium,
     overflow: 'hidden',
     shadowColor: "#000",
@@ -545,7 +505,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 3,
     elevation: 3,
-    height: "46%",
+    height: "47%",
   },
   metricContent: {
     padding: spacing.sm,

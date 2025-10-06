@@ -43,9 +43,10 @@ export default function LinkDeviceScreen() {
 
   // WiFi connection state only
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('idle');
-  const [wifiIP, setWifiIP] = useState('192.168.1.100');
+  const [wifiIP, setWifiIP] = useState('');
   const [wifiPort, setWifiPort] = useState('80');
   const [isDetecting, setIsDetecting] = useState(false);
+  const [hasAutoDetected, setHasAutoDetected] = useState(false);
 
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
@@ -86,6 +87,14 @@ export default function LinkDeviceScreen() {
       rotateAnim.setValue(0);
     }
   }, [connectionStatus]);
+
+  // Auto-detect IP on component mount
+  useEffect(() => {
+    if (!hasAutoDetected) {
+      handleAutoDetect();
+      setHasAutoDetected(true);
+    }
+  }, []);
 
   const handleAutoDetect = () => {
     setIsDetecting(true);
@@ -190,7 +199,7 @@ export default function LinkDeviceScreen() {
             <View style={[styles.esp32Badge, {
               backgroundColor: themeColors.primary
             }]}>
-              <Text style={styles.esp32Text}>ESP32</Text>
+              <Text style={styles.esp32Text}>{t('linkDevice.wifi.esp32Badge')}</Text>
             </View>
 
             <View style={[styles.methodIconContainer, {
@@ -309,20 +318,24 @@ export default function LinkDeviceScreen() {
         {/* Connection Status */}
         {connectionStatus !== 'idle' && (
           <View style={[styles.statusContainer, { backgroundColor: themeColors.surface }]}>
-            <Animated.View style={{ transform: [{ rotate: spin }] }}>
-              {connectionStatus === 'scanning' && (
-                <ActivityIndicator size="large" color={themeColors.primary} />
-              )}
-              {connectionStatus === 'connecting' && (
-                <MaterialCommunityIcons name="loading" size={32} color={themeColors.primary} />
-              )}
-              {connectionStatus === 'connected' && (
-                <Ionicons name="checkmark-circle" size={32} color={themeColors.success} />
-              )}
-              {connectionStatus === 'failed' && (
-                <Ionicons name="close-circle" size={32} color={themeColors.danger} />
-              )}
-            </Animated.View>
+            {/* Use Animated.View only for rotating statuses */}
+            {(connectionStatus === 'scanning' || connectionStatus === 'connecting') && (
+              <Animated.View style={{ transform: [{ rotate: spin }] }}>
+                {connectionStatus === 'scanning' && (
+                  <ActivityIndicator size="large" color={themeColors.primary} />
+                )}
+                {connectionStatus === 'connecting' && (
+                  <MaterialCommunityIcons name="loading" size={32} color={themeColors.primary} />
+                )}
+              </Animated.View>
+            )}
+            {/* Static icons without rotation */}
+            {connectionStatus === 'connected' && (
+              <Ionicons name="checkmark-circle" size={32} color={themeColors.success} />
+            )}
+            {connectionStatus === 'failed' && (
+              <Ionicons name="close-circle" size={32} color={themeColors.danger} />
+            )}
             <Text style={[styles.statusText, { color: themeColors.text.primary }]}>
               {connectionStatus === 'scanning' && t('linkDevice.status.scanning')}
               {connectionStatus === 'connecting' && t('linkDevice.status.connecting')}

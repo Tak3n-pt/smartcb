@@ -25,6 +25,8 @@ import {
   formatCurrent,
   formatPower,
   formatEnergy,
+  formatFrequency,
+  formatPowerFactor,
   getEventIcon,
   getEventColor,
 } from '../../utils';
@@ -112,7 +114,7 @@ export default function EventsScreen() {
   }, [consumptionStartDate, consumptionEndDate, startHour, endHour]);
 
   // OPTIMIZED: Memoize time series data generation
-  const { voltageData, currentTrendData, powerData } = useMemo(() => {
+  const { voltageData, currentTrendData, powerData, powerFactorData, frequencyData } = useMemo(() => {
     const generateTimeSeriesData = (points: number, baseValue: number, variance: number, includeSpike: boolean = false) => {
       const data = [];
       for (let i = 0; i < points; i++) {
@@ -134,6 +136,8 @@ export default function EventsScreen() {
       voltageData: generateTimeSeriesData(hourlyConsumption.length, 220, 8, true),
       currentTrendData: generateTimeSeriesData(hourlyConsumption.length, 3, 1.5, true),
       powerData: generateTimeSeriesData(hourlyConsumption.length, 660, 200, false),
+      powerFactorData: generateTimeSeriesData(hourlyConsumption.length, 0.95, 0.08, false),
+      frequencyData: generateTimeSeriesData(hourlyConsumption.length, 50.0, 0.3, false),
     };
   }, [hourlyConsumption.length]);
 
@@ -184,9 +188,12 @@ export default function EventsScreen() {
   const safetyEventTypes: Array<{ label: string; value: EventType; icon: string }> = [
     { label: t('events.safetyFilter.types.overvoltage'), value: 'overvoltage', icon: 'arrow-up-circle' },
     { label: t('events.safetyFilter.types.undervoltage'), value: 'undervoltage', icon: 'arrow-down-circle' },
-    { label: t('events.safetyFilter.types.overcurrent'), value: 'overcurrent', icon: 'speedometer' },
     { label: t('events.safetyFilter.types.overload'), value: 'overload', icon: 'warning' },
+    { label: 'Underload', value: 'underload', icon: 'arrow-down' },
     { label: t('events.safetyFilter.types.outage'), value: 'outage', icon: 'flash-off' },
+    { label: 'Frequency Min', value: 'frequency_min', icon: 'pulse' },
+    { label: 'Frequency Max', value: 'frequency_max', icon: 'pulse' },
+    { label: 'Power Factor Low', value: 'power_factor_min', icon: 'analytics' },
   ];
 
   const toggleEventType = (type: EventType) => {
@@ -575,9 +582,129 @@ export default function EventsScreen() {
             />
           </ScrollView>
         </Card>
+
+        {/* Power Factor Graph */}
+        <Card style={[styles.graphCard, { backgroundColor: themeColors.surface }]}>
+          <View style={styles.graphHeader}>
+            <View style={styles.graphTitleRow}>
+              <Ionicons name="analytics" size={20} color={themeColors.secondary} />
+              <Text style={[styles.graphTitle, { color: themeColors.text.primary }]}>
+                Power Factor
+              </Text>
+            </View>
+            <View style={styles.graphStats}>
+              <View style={styles.graphStat}>
+                <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.max')}</Text>
+                <Text style={[styles.graphStatValue, { color: themeColors.success }]}>
+                  {formatPowerFactor(Math.max(...powerFactorData))}
+                </Text>
+              </View>
+              <View style={styles.graphStat}>
+                <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.avg')}</Text>
+                <Text style={[styles.graphStatValue, { color: themeColors.text.primary }]}>
+                  {formatPowerFactor(powerFactorData.reduce((a, b) => a + b, 0) / powerFactorData.length)}
+                </Text>
+              </View>
+              <View style={styles.graphStat}>
+                <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.min')}</Text>
+                <Text style={[styles.graphStatValue, { color: themeColors.warning }]}>
+                  {formatPowerFactor(Math.min(...powerFactorData))}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <LineChart
+              data={{
+                labels: labels,
+                datasets: [{ data: isRTL ? powerFactorData.slice().reverse() : powerFactorData }],
+              }}
+              width={chartWidth}
+              height={220}
+              chartConfig={{
+                ...chartConfig,
+                color: (opacity = 1) => `rgba(156, 39, 176, ${opacity})`, // Purple for power factor
+              }}
+              bezier
+              style={styles.chart}
+              withInnerLines={true}
+              withOuterLines={true}
+              withVerticalLines={false}
+              withHorizontalLines={true}
+              fromZero={false}
+            />
+          </ScrollView>
+
+          <View style={[styles.safetyRange, { backgroundColor: themeColors.background }]}>
+            <Text style={[styles.safetyRangeText, { color: themeColors.text.secondary }]}>
+              Good Range: 0.85 - 1.0
+            </Text>
+          </View>
+        </Card>
+
+        {/* Frequency Graph */}
+        <Card style={[styles.graphCard, { backgroundColor: themeColors.surface }]}>
+          <View style={styles.graphHeader}>
+            <View style={styles.graphTitleRow}>
+              <Ionicons name="pulse" size={20} color={themeColors.info} />
+              <Text style={[styles.graphTitle, { color: themeColors.text.primary }]}>
+                Frequency
+              </Text>
+            </View>
+            <View style={styles.graphStats}>
+              <View style={styles.graphStat}>
+                <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.max')}</Text>
+                <Text style={[styles.graphStatValue, { color: themeColors.danger }]}>
+                  {formatFrequency(Math.max(...frequencyData))}
+                </Text>
+              </View>
+              <View style={styles.graphStat}>
+                <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.avg')}</Text>
+                <Text style={[styles.graphStatValue, { color: themeColors.text.primary }]}>
+                  {formatFrequency(frequencyData.reduce((a, b) => a + b, 0) / frequencyData.length)}
+                </Text>
+              </View>
+              <View style={styles.graphStat}>
+                <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.min')}</Text>
+                <Text style={[styles.graphStatValue, { color: themeColors.success }]}>
+                  {formatFrequency(Math.min(...frequencyData))}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <LineChart
+              data={{
+                labels: labels,
+                datasets: [{ data: isRTL ? frequencyData.slice().reverse() : frequencyData }],
+              }}
+              width={chartWidth}
+              height={220}
+              chartConfig={{
+                ...chartConfig,
+                color: (opacity = 1) => `rgba(0, 188, 212, ${opacity})`, // Cyan for frequency
+              }}
+              bezier
+              style={styles.chart}
+              withInnerLines={true}
+              withOuterLines={true}
+              withVerticalLines={false}
+              withHorizontalLines={true}
+              fromZero={false}
+            />
+          </ScrollView>
+
+          <View style={[styles.safetyRange, { backgroundColor: themeColors.background }]}>
+            <Text style={[styles.safetyRangeText, { color: themeColors.text.secondary }]}>
+              Standard: 50 Hz ±0.5 Hz
+            </Text>
+          </View>
+        </Card>
       </View>
     );
-  }, [graphLabels, voltageData, currentTrendData, powerData, chartWidth, chartConfig, isRTL, themeColors, t]);
+  }, [graphLabels, voltageData, currentTrendData, powerData, powerFactorData, frequencyData, chartWidth, chartConfig, isRTL, themeColors, t]);
 
   // Render date range picker
   const renderDateRangePicker = () => (
@@ -587,6 +714,67 @@ export default function EventsScreen() {
         <Text style={[styles.dateRangeTitle, { color: themeColors.text.primary }]}>
           {t('events.dateFilter.title')}
         </Text>
+      </View>
+
+      {/* Quick Presets - Same as Analytics */}
+      <View style={styles.quickPresetsContainer}>
+        <TouchableOpacity
+          onPress={() => {
+            const today = new Date();
+            setStartDate(today);
+            setEndDate(today);
+          }}
+          style={[styles.presetButton, { backgroundColor: themeColors.background, borderColor: themeColors.primary }]}
+        >
+          <Ionicons name="today-outline" size={16} color={themeColors.primary} />
+          <Text style={[styles.presetButtonText, { color: themeColors.text.primary }]}>
+            {t('events.consumption.datePresets.today')}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => {
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            setStartDate(yesterday);
+            setEndDate(yesterday);
+          }}
+          style={[styles.presetButton, { backgroundColor: themeColors.background, borderColor: themeColors.primary }]}
+        >
+          <Text style={[styles.presetButtonText, { color: themeColors.text.primary }]}>
+            {t('events.consumption.datePresets.yesterday')}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => {
+            const today = new Date();
+            const oneWeekAgo = new Date();
+            oneWeekAgo.setDate(oneWeekAgo.getDate() - 6);
+            setStartDate(oneWeekAgo);
+            setEndDate(today);
+          }}
+          style={[styles.presetButton, { backgroundColor: themeColors.background, borderColor: themeColors.primary }]}
+        >
+          <Text style={[styles.presetButtonText, { color: themeColors.text.primary }]}>
+            Last Week
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => {
+            const today = new Date();
+            const oneMonthAgo = new Date();
+            oneMonthAgo.setDate(oneMonthAgo.getDate() - 29);
+            setStartDate(oneMonthAgo);
+            setEndDate(today);
+          }}
+          style={[styles.presetButton, { backgroundColor: themeColors.background, borderColor: themeColors.primary }]}
+        >
+          <Text style={[styles.presetButtonText, { color: themeColors.text.primary }]}>
+            Last Month
+          </Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.dateRangeRow}>
@@ -985,30 +1173,30 @@ export default function EventsScreen() {
               <TouchableOpacity
                 onPress={() => {
                   const today = new Date();
-                  const threeDaysAgo = new Date();
-                  threeDaysAgo.setDate(threeDaysAgo.getDate() - 2);
-                  setConsumptionStartDate(threeDaysAgo);
+                  const oneWeekAgo = new Date();
+                  oneWeekAgo.setDate(oneWeekAgo.getDate() - 6);
+                  setConsumptionStartDate(oneWeekAgo);
                   setConsumptionEndDate(today);
                 }}
                 style={[styles.presetButton, { backgroundColor: themeColors.background, borderColor: themeColors.primary }]}
               >
                 <Text style={[styles.presetButtonText, { color: themeColors.text.primary }]}>
-                  {t('events.consumption.datePresets.last3Days')}
+                  Last Week
                 </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 onPress={() => {
                   const today = new Date();
-                  const sevenDaysAgo = new Date();
-                  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
-                  setConsumptionStartDate(sevenDaysAgo);
+                  const oneMonthAgo = new Date();
+                  oneMonthAgo.setDate(oneMonthAgo.getDate() - 29);
+                  setConsumptionStartDate(oneMonthAgo);
                   setConsumptionEndDate(today);
                 }}
                 style={[styles.presetButton, { backgroundColor: themeColors.background, borderColor: themeColors.primary }]}
               >
                 <Text style={[styles.presetButtonText, { color: themeColors.text.primary }]}>
-                  {t('events.consumption.datePresets.last7Days')}
+                  Last Month
                 </Text>
               </TouchableOpacity>
             </View>

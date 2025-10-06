@@ -72,7 +72,9 @@
       "shortHour": "{{count}}س",
       "shortMinute": "{{count}}د",
       "shortSecond": "{{count}}ث"
-    }
+    },
+    "active": "نشط",
+    "inactive": "غير نشط"
   },
   "welcome": {
     "title": "مرحباً بك في القاطع الذكي",
@@ -123,7 +125,8 @@
         "network": "اتصل بنفس شبكة WiFi",
         "ip": "أدخل عنوان IP لجهاز ESP32",
         "port": "المنفذ الافتراضي عادة 80 أو 8080"
-      }
+      },
+      "esp32Badge": "إي إس بي ٣٢"
     },
     "status": {
       "scanning": "جاري البحث عن الأجهزة...",
@@ -162,7 +165,8 @@
       "status": "الحالة",
       "turnedOn": "القاطع الكهربائي مُشغّل",
       "turnedOff": "القاطع الكهربائي مُطفأ",
-      "tapToToggle": "اضغط للتبديل"
+      "tapToToggle": "اضغط للتبديل",
+      "powerRelay": "مرحّل الطاقة"
     },
     "readings": {
       "voltage": "الجهد الكهربائي",
@@ -296,6 +300,14 @@
         "daily": "التفصيل اليومي",
         "weekly": "التفصيل الأسبوعي",
         "monthly": "التفصيل الشهري"
+      },
+      "powerFactor": {
+        "title": "معامل القدرة",
+        "goodRange": "النطاق الجيد: 0.85 - 1.0"
+      },
+      "frequency": {
+        "title": "التردد",
+        "standard": "القيمة القياسية: 50 هرتز ±0.5 هرتز"
       }
     },
     "dateFilter": {
@@ -311,7 +323,11 @@
         "undervoltage": "جهد منخفض",
         "overcurrent": "تيار زائد",
         "overload": "حمل زائد",
-        "outage": "انقطاع التيار"
+        "outage": "انقطاع التيار",
+        "underload": "انخفاض الحمل",
+        "frequencyMin": "أدنى تردد",
+        "frequencyMax": "أعلى تردد",
+        "powerFactorLow": "معامل قدرة منخفض"
       }
     },
     "statistics": {
@@ -336,6 +352,10 @@
         "overcurrent": "تم اكتشاف تيار زائد",
         "overload": "تم اكتشاف حمل زائد"
       }
+    },
+    "presets": {
+      "lastWeek": "الأسبوع الماضي",
+      "lastMonth": "الشهر الماضي"
     }
   },
   "settings": {
@@ -400,7 +420,9 @@
       "sound": "الصوت",
       "vibration": "الاهتزاز",
       "alertsTitle": "أنواع التنبيهات",
-      "preferencesTitle": "تفضيلات الإشعارات"
+      "preferencesTitle": "تفضيلات الإشعارات",
+      "frequencyAlerts": "تنبيهات التردد",
+      "powerFactorAlerts": "تنبيهات معامل القدرة"
     },
     "schedule": {
       "title": "الجدول التلقائي",
@@ -417,7 +439,8 @@
         "thursday": "الخميس",
         "friday": "الجمعة",
         "saturday": "السبت"
-      }
+      },
+      "add": "إضافة جدول"
     },
     "system": {
       "title": "معلومات النظام",

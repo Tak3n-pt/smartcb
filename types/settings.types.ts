@@ -49,16 +49,24 @@ export interface NotificationSettings {
   powerOutage: boolean;
   powerRestore: boolean;
   thresholdBreach: boolean;
+  frequencyAlerts?: boolean;
+  powerFactorAlerts?: boolean;
   deviceOffline: boolean;
   sound: boolean;
   vibration: boolean;
 }
 
-export interface ScheduleSettings {
-  enabled: boolean;
+export interface SingleSchedule {
+  id: string;
   onTime: string;       // "HH:MM" format
   offTime: string;      // "HH:MM" format
   days: number[];       // [0-6] (Sunday=0)
+  enabled: boolean;
+}
+
+export interface ScheduleSettings {
+  enabled: boolean;
+  schedules: SingleSchedule[];  // Multiple schedules per day
   oneTime?: {
     date: string;       // ISO date string
     time: string;       // "HH:MM" format

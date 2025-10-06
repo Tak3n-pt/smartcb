@@ -13,7 +13,11 @@ export type EventType =
   | 'overvoltage'
   | 'undervoltage'
   | 'overcurrent'
-  | 'overload';
+  | 'overload'
+  | 'underload'
+  | 'frequency_min'
+  | 'frequency_max'
+  | 'power_factor_min';
 
 export interface Event {
   id: string;

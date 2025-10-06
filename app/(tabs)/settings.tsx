@@ -251,34 +251,6 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        <View style={styles.settingRow}>
-          <Text style={[styles.label, { color: themeColors.text.secondary }]}>
-            {t('settings.thresholds.current.min', 'Minimum Current')}
-          </Text>
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={[
-                styles.input,
-                {
-                  color: themeColors.text.primary,
-                  backgroundColor: themeColors.background,
-                  borderColor: themeColors.border,
-                },
-              ]}
-              value={settings.thresholds.current.min?.toString() || '0'}
-              keyboardType="numeric"
-              onChangeText={(text) => {
-                const value = parseFloat(text) || 0;
-                updateThresholds({
-                  current: { ...settings.thresholds.current, min: value },
-                });
-              }}
-            />
-            <Text style={[styles.unit, { color: themeColors.text.secondary }]}>
-              {t('home.units.current')}
-            </Text>
-          </View>
-        </View>
       </Card>
 
       <Card style={styles.card}>
@@ -343,25 +315,6 @@ export default function SettingsScreen() {
             </Text>
           </View>
         </View>
-
-        <View style={styles.settingRow}>
-          <Text style={[styles.label, { color: themeColors.text.secondary }]}>
-            {t('settings.thresholds.frequency.enable')}
-          </Text>
-          <Switch
-            value={settings.thresholds.frequency.enabled}
-            onValueChange={(value) =>
-              updateThresholds({
-                frequency: { ...settings.thresholds.frequency, enabled: value },
-              })
-            }
-            trackColor={{
-              false: themeColors.border,
-              true: themeColors.success,
-            }}
-            thumbColor="white"
-          />
-        </View>
       </Card>
 
       <Card style={styles.card}>
@@ -396,25 +349,6 @@ export default function SettingsScreen() {
               {t('settings.thresholds.powerFactor.unit')}
             </Text>
           </View>
-        </View>
-
-        <View style={styles.settingRow}>
-          <Text style={[styles.label, { color: themeColors.text.secondary }]}>
-            {t('settings.thresholds.powerFactor.enable')}
-          </Text>
-          <Switch
-            value={settings.thresholds.powerFactor.enabled}
-            onValueChange={(value) =>
-              updateThresholds({
-                powerFactor: { ...settings.thresholds.powerFactor, enabled: value },
-              })
-            }
-            trackColor={{
-              false: themeColors.border,
-              true: themeColors.success,
-            }}
-            thumbColor="white"
-          />
         </View>
       </Card>
 
@@ -510,6 +444,40 @@ export default function SettingsScreen() {
 
         <View style={styles.settingRow}>
           <Text style={[styles.label, { color: themeColors.text.secondary }]}>
+            Frequency Alerts
+          </Text>
+          <Switch
+            value={settings.notifications.frequencyAlerts ?? true}
+            onValueChange={(value) =>
+              updateNotifications({ frequencyAlerts: value })
+            }
+            trackColor={{
+              false: themeColors.border,
+              true: themeColors.success,
+            }}
+            thumbColor="white"
+          />
+        </View>
+
+        <View style={styles.settingRow}>
+          <Text style={[styles.label, { color: themeColors.text.secondary }]}>
+            Power Factor Alerts
+          </Text>
+          <Switch
+            value={settings.notifications.powerFactorAlerts ?? true}
+            onValueChange={(value) =>
+              updateNotifications({ powerFactorAlerts: value })
+            }
+            trackColor={{
+              false: themeColors.border,
+              true: themeColors.success,
+            }}
+            thumbColor="white"
+          />
+        </View>
+
+        <View style={styles.settingRow}>
+          <Text style={[styles.label, { color: themeColors.text.secondary }]}>
             {t('settings.notifications.deviceOffline')}
           </Text>
           <Switch
@@ -564,7 +532,7 @@ export default function SettingsScreen() {
     </View>
   );
 
-  // Schedule Tab
+  // Schedule Tab - Multiple Schedules Support
   const renderScheduleTab = () => {
     const dayOptions = [
       { index: 0, label: t('settings.schedule.daysOfWeek.sunday') },
@@ -576,22 +544,47 @@ export default function SettingsScreen() {
       { index: 6, label: t('settings.schedule.daysOfWeek.saturday') },
     ];
 
-    const toggleDay = (dayIndex: number) => {
-      const includesDay = settings.schedule.days.includes(dayIndex);
-      const updatedDays = includesDay
-        ? settings.schedule.days.filter((d) => d !== dayIndex)
-        : [...settings.schedule.days, dayIndex];
-
-      updateSchedule({ days: updatedDays.sort((a, b) => a - b) });
+    const addNewSchedule = () => {
+      const newSchedule = {
+        id: Date.now().toString(),
+        onTime: '06:00',
+        offTime: '22:00',
+        days: [1, 2, 3, 4, 5], // Monday to Friday
+        enabled: true,
+      };
+      updateSchedule({
+        schedules: [...(settings.schedule.schedules || []), newSchedule]
+      });
     };
+
+    const deleteSchedule = (scheduleId: string) => {
+      const updatedSchedules = (settings.schedule.schedules || []).filter(s => s.id !== scheduleId);
+      updateSchedule({ schedules: updatedSchedules });
+    };
+
+    const toggleScheduleDay = (scheduleId: string, dayIndex: number) => {
+      const updatedSchedules = (settings.schedule.schedules || []).map(schedule => {
+        if (schedule.id === scheduleId) {
+          const includesDay = schedule.days.includes(dayIndex);
+          const updatedDays = includesDay
+            ? schedule.days.filter((d) => d !== dayIndex)
+            : [...schedule.days, dayIndex];
+          return { ...schedule, days: updatedDays.sort((a, b) => a - b) };
+        }
+        return schedule;
+      });
+      updateSchedule({ schedules: updatedSchedules });
+    };
+
+    const schedules = settings.schedule.schedules || [];
 
     return (
       <View>
         <Card style={styles.card}>
-          <Text style={[styles.cardTitle, { color: themeColors.text.primary }]}>{t('settings.schedule.title')}</Text>
-
-          <View style={styles.settingRow}>
-            <Text style={[styles.label, { color: themeColors.text.secondary }]}>{t('settings.schedule.enable')}</Text>
+          <View style={styles.cardHeaderRow}>
+            <Text style={[styles.cardTitle, { color: themeColors.text.primary }]}>
+              {t('settings.schedule.title')}
+            </Text>
             <Switch
               value={settings.schedule.enabled}
               onValueChange={(value) => updateSchedule({ enabled: value })}
@@ -602,50 +595,81 @@ export default function SettingsScreen() {
               thumbColor="white"
             />
           </View>
-
-          <View style={styles.settingRow}>
-            <Text style={[styles.label, { color: themeColors.text.secondary }]}>{t('settings.schedule.onTime')}</Text>
-            <Text style={[styles.value, { color: themeColors.text.primary }]}>{settings.schedule.onTime}</Text>
-          </View>
-
-          <View style={styles.settingRow}>
-            <Text style={[styles.label, { color: themeColors.text.secondary }]}>{t('settings.schedule.offTime')}</Text>
-            <Text style={[styles.value, { color: themeColors.text.primary }]}>{settings.schedule.offTime}</Text>
-          </View>
         </Card>
 
-        <Card style={styles.card}>
-          <Text style={[styles.cardTitle, { color: themeColors.text.primary }]}>{t('settings.schedule.days')}</Text>
-          <View style={styles.daysContainer}>
-            {dayOptions.map(({ index, label }) => {
-              const isSelected = settings.schedule.days.includes(index);
-              return (
-                <TouchableOpacity
-                  key={label}
-                  style={[
-                    styles.dayButton,
-                    {
-                      backgroundColor: isSelected
-                        ? themeColors.primary
-                        : themeColors.background,
-                      borderColor: themeColors.border,
-                    },
-                  ]}
-                  onPress={() => toggleDay(index)}
-                >
-                  <Text
+        {/* Multiple Schedules */}
+        {schedules.map((schedule, index) => (
+          <Card key={schedule.id} style={styles.card}>
+            <View style={styles.scheduleHeader}>
+              <Text style={[styles.scheduleTitle, { color: themeColors.text.primary }]}>
+                Schedule {index + 1}
+              </Text>
+              <TouchableOpacity onPress={() => deleteSchedule(schedule.id)}>
+                <Ionicons name="trash-outline" size={20} color={themeColors.danger} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.settingRow}>
+              <Text style={[styles.label, { color: themeColors.text.secondary }]}>
+                {t('settings.schedule.onTime')}
+              </Text>
+              <Text style={[styles.value, { color: themeColors.text.primary }]}>
+                {schedule.onTime}
+              </Text>
+            </View>
+
+            <View style={styles.settingRow}>
+              <Text style={[styles.label, { color: themeColors.text.secondary }]}>
+                {t('settings.schedule.offTime')}
+              </Text>
+              <Text style={[styles.value, { color: themeColors.text.primary }]}>
+                {schedule.offTime}
+              </Text>
+            </View>
+
+            <Text style={[styles.daysLabel, { color: themeColors.text.secondary }]}>
+              {t('settings.schedule.days')}
+            </Text>
+            <View style={styles.daysContainer}>
+              {dayOptions.map(({ index: dayIndex, label }) => {
+                const isSelected = schedule.days.includes(dayIndex);
+                return (
+                  <TouchableOpacity
+                    key={`${schedule.id}-${dayIndex}`}
                     style={[
-                      styles.dayText,
-                      { color: isSelected ? 'white' : themeColors.text.secondary },
+                      styles.dayButton,
+                      {
+                        backgroundColor: isSelected
+                          ? themeColors.primary
+                          : themeColors.background,
+                        borderColor: themeColors.border,
+                      },
                     ]}
+                    onPress={() => toggleScheduleDay(schedule.id, dayIndex)}
                   >
-                    {label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </Card>
+                    <Text
+                      style={[
+                        styles.dayText,
+                        { color: isSelected ? 'white' : themeColors.text.secondary },
+                      ]}
+                    >
+                      {label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </Card>
+        ))}
+
+        {/* Add New Schedule Button */}
+        <TouchableOpacity
+          style={[styles.addScheduleButton, { backgroundColor: themeColors.primary }]}
+          onPress={addNewSchedule}
+        >
+          <Ionicons name="add-circle-outline" size={24} color="white" />
+          <Text style={styles.addScheduleText}>Add Schedule</Text>
+        </TouchableOpacity>
       </View>
     );
   };
@@ -930,6 +954,41 @@ const styles = StyleSheet.create({
   },
   dayText: {
     ...typography.caption,
+    fontWeight: '600',
+  },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  scheduleHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  scheduleTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  daysLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  addScheduleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.md,
+    borderRadius: borderRadius.medium,
+    marginTop: spacing.md,
+    gap: spacing.xs,
+  },
+  addScheduleText: {
+    color: 'white',
+    fontSize: 16,
     fontWeight: '600',
   },
 });

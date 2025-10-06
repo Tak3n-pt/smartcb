@@ -72,7 +72,9 @@
       "shortHour": "{{count}}h",
       "shortMinute": "{{count}}m",
       "shortSecond": "{{count}}s"
-    }
+    },
+    "active": "Active",
+    "inactive": "Inactive"
   },
   "welcome": {
     "title": "Welcome to SmartCB",
@@ -123,7 +125,8 @@
         "network": "Connect to the same WiFi network",
         "ip": "Enter your ESP32 device IP address",
         "port": "Default port is usually 80 or 8080"
-      }
+      },
+      "esp32Badge": "ESP32"
     },
     "status": {
       "scanning": "Scanning for devices...",
@@ -162,7 +165,8 @@
       "status": "Status",
       "turnedOn": "Circuit breaker ON",
       "turnedOff": "Circuit breaker OFF",
-      "tapToToggle": "Tap to toggle"
+      "tapToToggle": "Tap to toggle",
+      "powerRelay": "Power Relay"
     },
     "readings": {
       "voltage": "Voltage",
@@ -296,6 +300,14 @@
         "daily": "Daily Breakdown",
         "weekly": "Weekly Breakdown",
         "monthly": "Monthly Breakdown"
+      },
+      "powerFactor": {
+        "title": "Power Factor",
+        "goodRange": "Good Range: 0.85 - 1.0"
+      },
+      "frequency": {
+        "title": "Frequency",
+        "standard": "Standard: 50 Hz ±0.5 Hz"
       }
     },
     "dateFilter": {
@@ -311,7 +323,11 @@
         "undervoltage": "Undervoltage",
         "overcurrent": "Overcurrent",
         "overload": "Overload",
-        "outage": "Outage"
+        "outage": "Outage",
+        "underload": "Underload",
+        "frequencyMin": "Frequency Min",
+        "frequencyMax": "Frequency Max",
+        "powerFactorLow": "Power Factor Low"
       }
     },
     "statistics": {
@@ -336,6 +352,10 @@
         "overcurrent": "Overcurrent detected",
         "overload": "Overload detected"
       }
+    },
+    "presets": {
+      "lastWeek": "Last Week",
+      "lastMonth": "Last Month"
     }
   },
   "settings": {
@@ -400,7 +420,9 @@
       "sound": "Sound",
       "vibration": "Vibration",
       "alertsTitle": "Alert Types",
-      "preferencesTitle": "Notification Preferences"
+      "preferencesTitle": "Notification Preferences",
+      "frequencyAlerts": "Frequency Alerts",
+      "powerFactorAlerts": "Power Factor Alerts"
     },
     "schedule": {
       "title": "Automatic Schedule",
@@ -417,7 +439,8 @@
         "thursday": "Thu",
         "friday": "Fri",
         "saturday": "Sat"
-      }
+      },
+      "add": "Add Schedule"
     },
     "system": {
       "title": "System Information",

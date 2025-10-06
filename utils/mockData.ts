@@ -18,6 +18,10 @@ const EVENT_DESCRIPTION_MAP: Record<EventType, string> = {
   undervoltage: 'events.eventsList.types.undervoltage',
   overcurrent: 'events.eventsList.types.overcurrent',
   overload: 'events.eventsList.types.overload',
+  underload: 'events.eventsList.types.underload',
+  frequency_min: 'events.eventsList.types.frequencyMin',
+  frequency_max: 'events.eventsList.types.frequencyMax',
+  power_factor_min: 'events.eventsList.types.powerFactorMin',
 };
 
 const MOCK_EVENT_TYPES: EventType[] = [
@@ -116,15 +120,23 @@ export const generateDefaultSettings = (): Settings => {
       powerOutage: true,
       powerRestore: true,
       thresholdBreach: true,
+      frequencyAlerts: true,
+      powerFactorAlerts: true,
       deviceOffline: true,
       sound: true,
       vibration: true,
     },
     schedule: {
       enabled: false,
-      onTime: '08:00',
-      offTime: '22:00',
-      days: [1, 2, 3, 4, 5], // Monday to Friday
+      schedules: [
+        {
+          id: '1',
+          onTime: '08:00',
+          offTime: '22:00',
+          days: [1, 2, 3, 4, 5], // Monday to Friday
+          enabled: true,
+        }
+      ],
     },
     wifi: {
       ssid: 'SmartCB-Network',
