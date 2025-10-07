@@ -6,7 +6,9 @@
       "Bash(npx tsc:*)",
       "Bash(npm install:*)",
       "Bash(npx expo start:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nAdd complete Arabic translation and UI enhancements\n\nMajor Features:\n- Complete Arabic translation (300+ strings in English and Arabic)\n- Language selector in Settings with instant switching\n- RTL (Right-to-Left) support for Arabic\n- Welcome screen with feature highlights\n- Link Device screen with Bluetooth/WiFi connection options\n- Enhanced electrical parameter formatting (voltage, current, power, energy)\n- Improved graphs with localized labels and stats\n\nTranslation Coverage:\n- All 5 main screens (Welcome, Link Device, Home, Events, Settings)\n- Tab navigation labels\n- All UI components and controls\n- Date/time formatting with cultural adaptation\n- Safety event types and notifications\n\nTechnical Implementation:\n- i18next and react-i18next integration\n- Zustand-based language store with AsyncStorage persistence\n- Translation namespaces organized by feature\n- Cultural-sensitive number and date formatting\n\nClient Testing:\n- Language can be changed in Settings → System → Language\n- All text updates instantly when switching languages\n- Mock data continues to work for testing without hardware\n\n🤖 Generated with Claude Code\nhttps://claude.com/claude-code\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []

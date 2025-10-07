@@ -52,7 +52,7 @@ export default function HomeScreen() {
       label: t('home.readings.voltage'),
       value: formatVoltage(data.voltage),
       color: themeColors.primary,
-      unit: "V",
+      unit: t('home.units.voltage'),
       rawValue: data.voltage,
     },
     {
@@ -61,7 +61,7 @@ export default function HomeScreen() {
       label: t('home.readings.current'),
       value: formatCurrent(data.current),
       color: themeColors.warning,
-      unit: "A",
+      unit: t('home.units.current'),
       rawValue: data.current,
     },
     {
@@ -70,7 +70,7 @@ export default function HomeScreen() {
       label: t('home.readings.energy'),
       value: formatEnergy(data.energy),
       color: themeColors.success,
-      unit: "kWh",
+      unit: t('home.units.energy'),
       rawValue: data.energy,
     },
     {
@@ -79,7 +79,7 @@ export default function HomeScreen() {
       label: t('home.readings.frequency'),
       value: formatFrequency(data.frequency),
       color: themeColors.info,
-      unit: "Hz",
+      unit: t('home.units.frequency'),
       rawValue: data.frequency,
     },
     {
@@ -88,7 +88,7 @@ export default function HomeScreen() {
       label: t('home.readings.powerFactor'),
       value: formatPowerFactor(data.powerFactor),
       color: themeColors.secondary,
-      unit: "PF",
+      unit: t('home.units.powerFactor'),
       rawValue: data.powerFactor,
     },
     {
@@ -97,7 +97,7 @@ export default function HomeScreen() {
       label: t('home.readings.apparentPower'),
       value: `${data.apparentPower.toFixed(0)} VA`,
       color: themeColors.tertiary || themeColors.primary,
-      unit: "VA",
+      unit: t('home.units.apparentPower'),
       rawValue: data.apparentPower,
     },
   ];
@@ -153,6 +153,56 @@ export default function HomeScreen() {
           </View>
         </View>
 
+        {/* Power Control - Modern Card Button */}
+        <Pressable
+          onPress={toggleRelay}
+          style={({ pressed }) => [
+            styles.relayControlButton,
+            { transform: [{ scale: pressed ? 0.98 : 1 }] },
+          ]}
+        >
+          <LinearGradient
+            colors={data.relayState
+              ? ['#0EA5E9', '#2563EB'] // ON: cyan → indigo
+              : ['#374151', '#1F2937'] // OFF: gray → dark gray
+            }
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.relayGradient}
+          >
+            <View style={styles.powerControlRow}>
+              <View style={styles.powerControlLeft}>
+                <View style={styles.powerIconWrap}>
+                  <MaterialCommunityIcons
+                    name={data.relayState ? "power" : "power-off"}
+                    size={26}
+                    color="#FFFFFF"
+                  />
+                </View>
+                <View>
+                  <Text style={styles.powerControlTitle}>{t('home.relayControl.title')}</Text>
+                  <Text style={styles.powerControlSubtitle}>{t('home.relayControl.tapToToggle')}</Text>
+                </View>
+              </View>
+              <View
+                style={[
+                  styles.statePill,
+                  { backgroundColor: data.relayState ? '#FFFFFF' : '#FFFFFF20' },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.statePillText,
+                    { color: data.relayState ? '#16A34A' : '#FFFFFF' },
+                  ]}
+                >
+                  {data.relayState ? t('common.on') : t('common.off')}
+                </Text>
+              </View>
+            </View>
+          </LinearGradient>
+        </Pressable>
+
         {/* Main Power Display */}
         <LinearGradient
           colors={theme === 'dark'
@@ -175,69 +225,7 @@ export default function HomeScreen() {
           <Text style={[styles.powerValue, { color: themeColors.primary }]}>
             {formatPower(data.power)}
           </Text>
-          <View style={styles.powerStatus}>
-            <View style={[
-              styles.powerIndicator,
-              { backgroundColor: data.power > 0 ? themeColors.success : themeColors.text.secondary }
-            ]} />
-            <Text style={[styles.powerStatusText, { color: themeColors.text.secondary }]}>
-              {data.power > 0 ? t('home.powerStatus.active') : t('home.powerStatus.idle')}
-            </Text>
-          </View>
         </LinearGradient>
-
-        {/* Relay Control - Premium Design */}
-        <Pressable
-          onPress={toggleRelay}
-          style={({ pressed }) => [
-            styles.relayControlButton,
-            {
-              transform: [{ scale: pressed ? 0.97 : 1 }],
-            }
-          ]}
-        >
-          <LinearGradient
-            colors={data.relayState
-              ? ['#10B981', '#059669']
-              : ['#374151', '#1F2937']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.relayGradient}
-          >
-            <View style={styles.relayContent}>
-              <View style={styles.relayLeft}>
-                <View style={[
-                  styles.relayIconContainer,
-                  { backgroundColor: data.relayState ? '#FFFFFF20' : '#FFFFFF15' }
-                ]}>
-                  <MaterialCommunityIcons
-                    name={data.relayState ? "power" : "power-off"}
-                    size={26}
-                    color="#FFFFFF"
-                  />
-                </View>
-                <View>
-                  <Text style={styles.relayTitle}>{t('home.relayControl.powerRelay')}</Text>
-                  <Text style={styles.relayStatus}>
-                    {data.relayState ? t('common.active') : t('common.inactive')}
-                  </Text>
-                </View>
-              </View>
-
-              <View style={[
-                styles.relayBadge,
-                { backgroundColor: data.relayState ? '#FFFFFF' : '#FFFFFF20' }
-              ]}>
-                <Text style={[
-                  styles.relayBadgeText,
-                  { color: data.relayState ? '#059669' : '#FFFFFF' }
-                ]}>
-                  {data.relayState ? t('common.on') : t('common.off')}
-                </Text>
-              </View>
-            </View>
-          </LinearGradient>
-        </Pressable>
 
         {/* Electrical Metrics Grid - Modern Clear Cards */}
         <View style={styles.metricsContainer}>
@@ -422,7 +410,7 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
 
-  // Relay Control - Premium Gradient
+  // Relay Control - Simple ON/OFF
   relayControlButton: {
     marginBottom: spacing.md,
     borderRadius: borderRadius.large,
@@ -436,49 +424,48 @@ const styles = StyleSheet.create({
   relayGradient: {
     borderRadius: borderRadius.large,
   },
-  relayContent: {
+  powerControlRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: spacing.md + 2,
-    paddingHorizontal: spacing.md + 4,
+    paddingHorizontal: spacing.md + 2,
   },
-  relayLeft: {
+  powerControlLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
   },
-  relayIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+  powerIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF22',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  relayTitle: {
-    fontSize: 15,
-    fontWeight: "700",
+  powerControlTitle: {
     color: '#FFFFFF',
-    letterSpacing: 0.5,
+    fontSize: 16,
+    fontWeight: '800',
+    letterSpacing: 0.3,
   },
-  relayStatus: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: '#FFFFFFBB',
+  powerControlSubtitle: {
+    color: '#FFFFFFCC',
+    fontSize: 12,
     marginTop: 2,
-    letterSpacing: 0.8,
   },
-  relayBadge: {
-    paddingHorizontal: spacing.md + 2,
-    paddingVertical: spacing.xs + 2,
+  statePill: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
     borderRadius: borderRadius.large,
-    minWidth: 56,
+    minWidth: 68,
     alignItems: 'center',
   },
-  relayBadgeText: {
-    fontSize: 15,
-    fontWeight: "800",
-    letterSpacing: 1.2,
+  statePillText: {
+    fontSize: 14,
+    fontWeight: '800',
+    letterSpacing: 0.8,
   },
 
   // Metrics Section - Professional Cards

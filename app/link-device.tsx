@@ -19,6 +19,7 @@ import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { colors, spacing, typography, borderRadius, shadows } from '../theme';
 import { useThemeStore, useElectricalStore } from '../store';
+import { SuccessModal } from '../components/SuccessModal';
 
 type ThemePalette = (typeof colors)['light'];
 type ConnectionStatus = 'idle' | 'connecting' | 'connected' | 'failed';
@@ -47,6 +48,7 @@ export default function LinkDeviceScreen() {
   const [wifiPort, setWifiPort] = useState('80');
   const [isDetecting, setIsDetecting] = useState(false);
   const [hasAutoDetected, setHasAutoDetected] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
@@ -129,10 +131,19 @@ export default function LinkDeviceScreen() {
       setConnectionStatus('connected');
       // Update store to indicate we're connected (not in demo mode)
       setConnected(true);
+      // Show success modal instead of immediately navigating
       setTimeout(() => {
-        router.replace('/(tabs)');
-      }, 1000);
+        setShowSuccessModal(true);
+      }, 500);
     }, 3000);
+  };
+
+  const handleModalClose = () => {
+    setShowSuccessModal(false);
+    // Navigate after modal closes
+    setTimeout(() => {
+      router.replace('/(tabs)');
+    }, 300);
   };
 
   const spin = rotateAnim.interpolate({
@@ -400,6 +411,16 @@ export default function LinkDeviceScreen() {
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Success Modal */}
+      <SuccessModal
+        visible={showSuccessModal}
+        title={t('linkDevice.success.title')}
+        message={t('linkDevice.success.message')}
+        buttonText={t('linkDevice.success.button')}
+        onClose={handleModalClose}
+        theme={theme}
+      />
     </SafeAreaView>
   );
 }

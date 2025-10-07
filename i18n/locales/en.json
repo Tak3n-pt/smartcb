@@ -78,21 +78,21 @@
   },
   "welcome": {
     "title": "Welcome to SmartCB",
-    "subtitle": "A refined control center for your intelligent circuit breaker, delivering clarity, control, and peace of mind.",
-    "getStarted": "Get Started",
-    "footerText": "Seamless energy management at your fingertips.",
+    "subtitle": "Your intelligent circuit breaker that combines safety, control, and smart automation — ensuring stability and peace of mind for your electrical system.",
+    "getStarted": "GET STARTED",
+    "footerText": "Smart protection and effortless control, all at your fingertips.",
     "features": {
-      "liveMonitoring": {
-        "title": "Live Monitoring",
-        "description": "Track voltage, current, and power metrics in real time with responsive alerts."
+      "smartProtection": {
+        "title": "⚡ Smart Protection",
+        "description": "Automatically disconnects and reconnects only when voltage is stable, preventing damage to your equipment during power returns or surges."
       },
-      "safetyAutomation": {
-        "title": "Safety Automation",
-        "description": "Smart relay control reacts instantly to protect your equipment from electrical faults."
+      "remoteControl": {
+        "title": "📲 Remote Control",
+        "description": "Monitor and manage your circuit breaker anytime, anywhere. Turn it ON/OFF remotely, set timers, and customize thresholds for voltage, current, power factor, and frequency."
       },
-      "insightfulAnalytics": {
-        "title": "Insightful Analytics",
-        "description": "Understand consumption trends and optimize energy usage with clear visual dashboards."
+      "realTimeInsights": {
+        "title": "📈 Real-Time Insights",
+        "description": "View live data of your energy usage, voltage, and current with instant alerts and event history — keeping you always informed and in control."
       }
     }
   },
@@ -140,6 +140,11 @@
       "scanAndConnect": "Scan & Connect",
       "connect": "Connect"
     },
+    "success": {
+      "title": "Successfully Connected!",
+      "message": "Your SmartCB device is now connected and ready to use. You can start monitoring your electrical system.",
+      "button": "Get Started"
+    },
     "help": "Having trouble connecting?",
     "modal": {
       "title": "Available Devices",
@@ -158,7 +163,7 @@
       "connectButton": "Connect"
     },
     "relayControl": {
-      "title": "Relay Control",
+      "title": "Power Control",
       "label": "BREAKER",
       "turnOn": "Turn ON",
       "turnOff": "Turn OFF",
@@ -350,7 +355,11 @@
         "overvoltage": "Overvoltage detected",
         "undervoltage": "Undervoltage detected",
         "overcurrent": "Overcurrent detected",
-        "overload": "Overload detected"
+        "overload": "Overload detected",
+        "underload": "Underload detected",
+        "frequencyMin": "Frequency below minimum",
+        "frequencyMax": "Frequency above maximum",
+        "powerFactorMin": "Low power factor detected"
       }
     },
     "presets": {
@@ -421,6 +430,7 @@
       "vibration": "Vibration",
       "alertsTitle": "Alert Types",
       "preferencesTitle": "Notification Preferences",
+      "safetyAlerts": "Safety Alerts",
       "frequencyAlerts": "Frequency Alerts",
       "powerFactorAlerts": "Power Factor Alerts"
     },
@@ -488,5 +498,8 @@
     "header": "Oops!",
     "message": "This screen doesn't exist.",
     "cta": "Go to home screen!"
+  },
+  "types": {
+    "timeFormat": "HH:MM"
   }
 }

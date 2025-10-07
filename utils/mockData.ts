@@ -92,6 +92,7 @@ export const generateDefaultSettings = (): Settings => {
         action: 'alert',
       },
       current: {
+        min: 0.5,
         max: 16,
         enabled: true,
         delay: 2,
@@ -123,6 +124,15 @@ export const generateDefaultSettings = (): Settings => {
       frequencyAlerts: true,
       powerFactorAlerts: true,
       deviceOffline: true,
+      // Safety alerts (default enabled)
+      overvoltage: true,
+      undervoltage: true,
+      overcurrent: true,
+      overload: true,
+      underload: true,
+      frequencyMin: true,
+      frequencyMax: true,
+      powerFactorLow: true,
       sound: true,
       vibration: true,
     },

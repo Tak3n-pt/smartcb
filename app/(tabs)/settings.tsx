@@ -28,6 +28,50 @@ export default function SettingsScreen() {
   const { t } = useTranslation();
 
   const [activeTab, setActiveTab] = useState<SettingsTab>('thresholds');
+  // Lightweight time editing modal state (display-only UX)
+  const [timeModal, setTimeModal] = useState<{
+    visible: boolean;
+    scheduleId?: string;
+    field?: 'onTime' | 'offTime';
+    hour?: number;
+    minute?: number;
+  }>({ visible: false });
+
+  const openTimeModal = (scheduleId: string, field: 'onTime' | 'offTime', value: string) => {
+    const [h, m] = value.split(':');
+    const hour = Math.max(0, Math.min(23, parseInt(h || '0', 10)));
+    const minute = Math.max(0, Math.min(59, parseInt(m || '0', 10)));
+    setTimeModal({ visible: true, scheduleId, field, hour, minute });
+  };
+
+  const closeTimeModal = () => setTimeModal({ visible: false });
+
+  const applyTimeModal = () => {
+    if (!timeModal.visible || !timeModal.scheduleId || !timeModal.field) {
+      return;
+    }
+    const hh = String(timeModal.hour ?? 0).padStart(2, '0');
+    const mm = String(timeModal.minute ?? 0).padStart(2, '0');
+    const next = (settings.schedule.schedules || []).map((s) =>
+      s.id === timeModal.scheduleId ? { ...s, [timeModal.field!]: `${hh}:${mm}` } : s
+    );
+    updateSchedule({ schedules: next });
+    closeTimeModal();
+  };
+
+  const stepTime = (part: 'hour' | 'minute', delta: number) => {
+    setTimeModal((prev) => {
+      if (!prev.visible) return prev;
+      let hour = prev.hour ?? 0;
+      let minute = prev.minute ?? 0;
+      if (part === 'hour') {
+        hour = (hour + delta + 24) % 24;
+      } else {
+        minute = (minute + delta + 60) % 60;
+      }
+      return { ...prev, hour, minute };
+    });
+  };
 
   // Tab buttons with icons
   const renderTabs = () => (
@@ -251,6 +295,35 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+        <View style={styles.settingRow}>
+          <Text style={[styles.label, { color: themeColors.text.secondary }]}>
+            {t('settings.thresholds.current.min')}
+          </Text>
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={[
+                styles.input,
+                {
+                  color: themeColors.text.primary,
+                  backgroundColor: themeColors.background,
+                  borderColor: themeColors.border,
+                },
+              ]}
+              value={settings.thresholds.current.min.toString()}
+              keyboardType="numeric"
+              onChangeText={(text) => {
+                const value = parseFloat(text) || settings.thresholds.current.min;
+                updateThresholds({
+                  current: { ...settings.thresholds.current, min: value },
+                });
+              }}
+            />
+            <Text style={[styles.unit, { color: themeColors.text.secondary }]}>
+              {t('home.units.current')}
+            </Text>
+          </View>
+        </View>
+
       </Card>
 
       <Card style={styles.card}>
@@ -391,87 +464,15 @@ export default function SettingsScreen() {
           {t('settings.notifications.alertsTitle')}
         </Text>
 
-        <View style={styles.settingRow}>
-          <Text style={[styles.label, { color: themeColors.text.secondary }]}>
-            {t('settings.notifications.powerOutage')}
-          </Text>
-          <Switch
-            value={settings.notifications.powerOutage}
-            onValueChange={(value) =>
-              updateNotifications({ powerOutage: value })
-            }
-            trackColor={{
-              false: themeColors.border,
-              true: themeColors.success,
-            }}
-            thumbColor="white"
-          />
-        </View>
-
+        {/* Keep only Power Restore & Device Offline */}
         <View style={styles.settingRow}>
           <Text style={[styles.label, { color: themeColors.text.secondary }]}>
             {t('settings.notifications.powerRestore')}
           </Text>
           <Switch
             value={settings.notifications.powerRestore}
-            onValueChange={(value) =>
-              updateNotifications({ powerRestore: value })
-            }
-            trackColor={{
-              false: themeColors.border,
-              true: themeColors.success,
-            }}
-            thumbColor="white"
-          />
-        </View>
-
-        <View style={styles.settingRow}>
-          <Text style={[styles.label, { color: themeColors.text.secondary }]}>
-            {t('settings.notifications.thresholdBreach')}
-          </Text>
-          <Switch
-            value={settings.notifications.thresholdBreach}
-            onValueChange={(value) =>
-              updateNotifications({ thresholdBreach: value })
-            }
-            trackColor={{
-              false: themeColors.border,
-              true: themeColors.success,
-            }}
-            thumbColor="white"
-          />
-        </View>
-
-        <View style={styles.settingRow}>
-          <Text style={[styles.label, { color: themeColors.text.secondary }]}>
-            Frequency Alerts
-          </Text>
-          <Switch
-            value={settings.notifications.frequencyAlerts ?? true}
-            onValueChange={(value) =>
-              updateNotifications({ frequencyAlerts: value })
-            }
-            trackColor={{
-              false: themeColors.border,
-              true: themeColors.success,
-            }}
-            thumbColor="white"
-          />
-        </View>
-
-        <View style={styles.settingRow}>
-          <Text style={[styles.label, { color: themeColors.text.secondary }]}>
-            Power Factor Alerts
-          </Text>
-          <Switch
-            value={settings.notifications.powerFactorAlerts ?? true}
-            onValueChange={(value) =>
-              updateNotifications({ powerFactorAlerts: value })
-            }
-            trackColor={{
-              false: themeColors.border,
-              true: themeColors.success,
-            }}
+            onValueChange={(value) => updateNotifications({ powerRestore: value })}
+            trackColor={{ false: themeColors.border, true: themeColors.success }}
             thumbColor="white"
           />
         </View>
@@ -482,13 +483,111 @@ export default function SettingsScreen() {
           </Text>
           <Switch
             value={settings.notifications.deviceOffline}
-            onValueChange={(value) =>
-              updateNotifications({ deviceOffline: value })
-            }
-            trackColor={{
-              false: themeColors.border,
-              true: themeColors.success,
-            }}
+            onValueChange={(value) => updateNotifications({ deviceOffline: value })}
+            trackColor={{ false: themeColors.border, true: themeColors.success }}
+            thumbColor="white"
+          />
+        </View>
+      </Card>
+
+      {/* Safety alerts derived from Events safety filter */}
+      <Card style={styles.card}>
+        <Text style={[styles.cardTitle, { color: themeColors.text.primary }]}>
+          {t('settings.notifications.safetyAlerts')}
+        </Text>
+
+        <View style={styles.settingRow}>
+          <Text style={[styles.label, { color: themeColors.text.secondary }]}>
+            {t('events.safetyFilter.types.overvoltage')}
+          </Text>
+          <Switch
+            value={settings.notifications.overvoltage ?? true}
+            onValueChange={(value) => updateNotifications({ overvoltage: value })}
+            trackColor={{ false: themeColors.border, true: themeColors.success }}
+            thumbColor="white"
+          />
+        </View>
+
+        <View style={styles.settingRow}>
+          <Text style={[styles.label, { color: themeColors.text.secondary }]}>
+            {t('events.safetyFilter.types.undervoltage')}
+          </Text>
+          <Switch
+            value={settings.notifications.undervoltage ?? true}
+            onValueChange={(value) => updateNotifications({ undervoltage: value })}
+            trackColor={{ false: themeColors.border, true: themeColors.success }}
+            thumbColor="white"
+          />
+        </View>
+
+        <View style={styles.settingRow}>
+          <Text style={[styles.label, { color: themeColors.text.secondary }]}>
+            {t('events.safetyFilter.types.overcurrent')}
+          </Text>
+          <Switch
+            value={settings.notifications.overcurrent ?? true}
+            onValueChange={(value) => updateNotifications({ overcurrent: value })}
+            trackColor={{ false: themeColors.border, true: themeColors.success }}
+            thumbColor="white"
+          />
+        </View>
+
+        <View style={styles.settingRow}>
+          <Text style={[styles.label, { color: themeColors.text.secondary }]}>
+            {t('events.safetyFilter.types.overload')}
+          </Text>
+          <Switch
+            value={settings.notifications.overload ?? true}
+            onValueChange={(value) => updateNotifications({ overload: value })}
+            trackColor={{ false: themeColors.border, true: themeColors.success }}
+            thumbColor="white"
+          />
+        </View>
+
+        <View style={styles.settingRow}>
+          <Text style={[styles.label, { color: themeColors.text.secondary }]}>
+            {t('events.safetyFilter.types.underload')}
+          </Text>
+          <Switch
+            value={settings.notifications.underload ?? true}
+            onValueChange={(value) => updateNotifications({ underload: value })}
+            trackColor={{ false: themeColors.border, true: themeColors.success }}
+            thumbColor="white"
+          />
+        </View>
+
+        <View style={styles.settingRow}>
+          <Text style={[styles.label, { color: themeColors.text.secondary }]}>
+            {t('events.safetyFilter.types.frequencyMin')}
+          </Text>
+          <Switch
+            value={settings.notifications.frequencyMin ?? true}
+            onValueChange={(value) => updateNotifications({ frequencyMin: value })}
+            trackColor={{ false: themeColors.border, true: themeColors.success }}
+            thumbColor="white"
+          />
+        </View>
+
+        <View style={styles.settingRow}>
+          <Text style={[styles.label, { color: themeColors.text.secondary }]}>
+            {t('events.safetyFilter.types.frequencyMax')}
+          </Text>
+          <Switch
+            value={settings.notifications.frequencyMax ?? true}
+            onValueChange={(value) => updateNotifications({ frequencyMax: value })}
+            trackColor={{ false: themeColors.border, true: themeColors.success }}
+            thumbColor="white"
+          />
+        </View>
+
+        <View style={styles.settingRow}>
+          <Text style={[styles.label, { color: themeColors.text.secondary }]}>
+            {t('events.safetyFilter.types.powerFactorLow')}
+          </Text>
+          <Switch
+            value={settings.notifications.powerFactorLow ?? true}
+            onValueChange={(value) => updateNotifications({ powerFactorLow: value })}
+            trackColor={{ false: themeColors.border, true: themeColors.success }}
             thumbColor="white"
           />
         </View>
@@ -576,55 +675,74 @@ export default function SettingsScreen() {
       updateSchedule({ schedules: updatedSchedules });
     };
 
+    const updateScheduleField = (
+      scheduleId: string,
+      changes: Partial<{ onTime: string; offTime: string; enabled: boolean }>
+    ) => {
+      const updatedSchedules = (settings.schedule.schedules || []).map((s) =>
+        s.id === scheduleId ? { ...s, ...changes } : s
+      );
+      updateSchedule({ schedules: updatedSchedules });
+    };
+
     const schedules = settings.schedule.schedules || [];
 
     return (
       <View>
-        <Card style={styles.card}>
-          <View style={styles.cardHeaderRow}>
-            <Text style={[styles.cardTitle, { color: themeColors.text.primary }]}>
-              {t('settings.schedule.title')}
-            </Text>
-            <Switch
-              value={settings.schedule.enabled}
-              onValueChange={(value) => updateSchedule({ enabled: value })}
-              trackColor={{
-                false: themeColors.border,
-                true: themeColors.success,
-              }}
-              thumbColor="white"
-            />
-          </View>
-        </Card>
-
         {/* Multiple Schedules */}
         {schedules.map((schedule, index) => (
-          <Card key={schedule.id} style={styles.card}>
+          <Card key={schedule.id} style={[styles.card, { opacity: schedule.enabled ? 1 : 0.65 }]}>
             <View style={styles.scheduleHeader}>
               <Text style={[styles.scheduleTitle, { color: themeColors.text.primary }]}>
-                Schedule {index + 1}
+                {t('settings.tabs.timer')} {index + 1}
               </Text>
-              <TouchableOpacity onPress={() => deleteSchedule(schedule.id)}>
-                <Ionicons name="trash-outline" size={20} color={themeColors.danger} />
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                <Switch
+                  value={schedule.enabled}
+                  onValueChange={(value) => updateScheduleField(schedule.id, { enabled: value })}
+                  trackColor={{ false: themeColors.border, true: themeColors.success }}
+                  thumbColor="white"
+                />
+                <TouchableOpacity onPress={() => deleteSchedule(schedule.id)}>
+                  <Ionicons name="trash-outline" size={20} color={themeColors.danger} />
+                </TouchableOpacity>
+              </View>
             </View>
 
             <View style={styles.settingRow}>
               <Text style={[styles.label, { color: themeColors.text.secondary }]}>
                 {t('settings.schedule.onTime')}
               </Text>
-              <Text style={[styles.value, { color: themeColors.text.primary }]}>
-                {schedule.onTime}
-              </Text>
+              <TouchableOpacity
+                style={[
+                  styles.timeChip,
+                  { backgroundColor: themeColors.background, borderColor: themeColors.border },
+                ]}
+                onPress={() => openTimeModal(schedule.id, 'onTime', schedule.onTime)}
+              >
+                <Ionicons name="time-outline" size={16} color={themeColors.text.secondary} />
+                <Text style={[styles.timeChipText, { color: themeColors.text.primary }]}>
+                  {schedule.onTime}
+                </Text>
+              </TouchableOpacity>
             </View>
 
             <View style={styles.settingRow}>
               <Text style={[styles.label, { color: themeColors.text.secondary }]}>
                 {t('settings.schedule.offTime')}
               </Text>
-              <Text style={[styles.value, { color: themeColors.text.primary }]}>
-                {schedule.offTime}
-              </Text>
+              <TouchableOpacity
+                style={[
+                  styles.timeChip,
+                  { backgroundColor: themeColors.background, borderColor: themeColors.border },
+                ]}
+                onPress={() => openTimeModal(schedule.id, 'offTime', schedule.offTime)}
+              >
+                <Ionicons name="time-outline" size={16} color={themeColors.text.secondary} />
+                <Text style={[styles.timeChipText, { color: themeColors.text.primary }]}>
+                  {schedule.offTime}
+                </Text>
+              </TouchableOpacity>
             </View>
 
             <Text style={[styles.daysLabel, { color: themeColors.text.secondary }]}>
@@ -668,8 +786,71 @@ export default function SettingsScreen() {
           onPress={addNewSchedule}
         >
           <Ionicons name="add-circle-outline" size={24} color="white" />
-          <Text style={styles.addScheduleText}>Add Schedule</Text>
+          <Text style={styles.addScheduleText}>{t('settings.schedule.add')}</Text>
         </TouchableOpacity>
+
+        {/* Time Picker Modal - Display only */}
+        {timeModal.visible && (
+          <View style={styles.timeModalOverlay}>
+            <View style={[styles.timeModalCard, { backgroundColor: themeColors.surface }]}> 
+              <Text style={[styles.modalTitle, { color: themeColors.text.primary }]}>
+                {timeModal.field === 'onTime' ? t('settings.schedule.onTime') : t('settings.schedule.offTime')}
+              </Text>
+
+              <View style={styles.timePickerRow}>
+                <View style={styles.timeColumn}>
+                  <TouchableOpacity style={styles.stepButton} onPress={() => stepTime('hour', +1)}>
+                    <Ionicons name="chevron-up" size={20} color={themeColors.text.primary} />
+                  </TouchableOpacity>
+                  <Text style={[styles.timeNumber, { color: themeColors.text.primary }]}>
+                    {String(timeModal.hour ?? 0).padStart(2, '0')}
+                  </Text>
+                  <TouchableOpacity style={styles.stepButton} onPress={() => stepTime('hour', -1)}>
+                    <Ionicons name="chevron-down" size={20} color={themeColors.text.primary} />
+                  </TouchableOpacity>
+                </View>
+
+                <Text style={[styles.timeSeparator, { color: themeColors.text.secondary }]}>:</Text>
+
+                <View style={styles.timeColumn}>
+                  <TouchableOpacity style={styles.stepButton} onPress={() => stepTime('minute', +1)}>
+                    <Ionicons name="chevron-up" size={20} color={themeColors.text.primary} />
+                  </TouchableOpacity>
+                  <Text style={[styles.timeNumber, { color: themeColors.text.primary }]}>
+                    {String(timeModal.minute ?? 0).padStart(2, '0')}
+                  </Text>
+                  <TouchableOpacity style={styles.stepButton} onPress={() => stepTime('minute', -1)}>
+                    <Ionicons name="chevron-down" size={20} color={themeColors.text.primary} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={styles.presetsRow}>
+                {['06:00','08:00','18:00','22:00'].map((p) => (
+                  <TouchableOpacity
+                    key={p}
+                    style={[styles.presetChip, { borderColor: themeColors.border, backgroundColor: themeColors.background }]}
+                    onPress={() => {
+                      const [h,m] = p.split(':');
+                      setTimeModal((prev) => ({ ...prev, hour: parseInt(h,10), minute: parseInt(m,10) }));
+                    }}
+                  >
+                    <Text style={[styles.presetChipText, { color: themeColors.text.primary }]}>{p}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <View style={styles.modalActions}>
+                <TouchableOpacity style={[styles.modalButton, { borderColor: themeColors.border }]} onPress={closeTimeModal}>
+                  <Text style={[styles.modalButtonText, { color: themeColors.text.secondary }]}>{t('common.cancel')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.modalButtonPrimary, { backgroundColor: themeColors.primary }]} onPress={applyTimeModal}>
+                  <Text style={[styles.modalButtonPrimaryText, { color: themeColors.text.inverse }]}>{t('common.done')}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        )}
       </View>
     );
   };
@@ -758,7 +939,7 @@ export default function SettingsScreen() {
                 styles.languageButtonText,
                 { color: language === 'ar' ? themeColors.text.inverse : themeColors.text.secondary }
               ]}>
-                العربية
+                {t('settings.system.languages.arabic')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -990,5 +1171,110 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+  // Time editing UX
+  timeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 8,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.medium,
+    borderWidth: 1,
+  },
+  timeChipText: {
+    ...typography.body,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+  },
+  timeModalOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  timeModalCard: {
+    borderTopLeftRadius: borderRadius.xlarge,
+    borderTopRightRadius: borderRadius.xlarge,
+    padding: spacing.lg,
+  },
+  modalTitle: {
+    ...typography.h4,
+    marginBottom: spacing.md,
+    textAlign: 'center',
+  },
+  timePickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xl,
+    marginBottom: spacing.md,
+  },
+  timeColumn: {
+    alignItems: 'center',
+  },
+  timeNumber: {
+    fontSize: 28,
+    fontWeight: '800',
+    letterSpacing: 1,
+    marginVertical: 2,
+  },
+  timeSeparator: {
+    fontSize: 26,
+    fontWeight: '700',
+    marginHorizontal: spacing.sm,
+  },
+  stepButton: {
+    width: 40,
+    height: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: borderRadius.medium,
+  },
+  presetsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  presetChip: {
+    paddingVertical: 6,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.large,
+    borderWidth: 1,
+  },
+  presetChipText: {
+    ...typography.bodySmall,
+    fontWeight: '600',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.medium,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  modalButtonText: {
+    ...typography.body,
+    fontWeight: '600',
+  },
+  modalButtonPrimary: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.medium,
+    alignItems: 'center',
+  },
+  modalButtonPrimaryText: {
+    ...typography.body,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
 });

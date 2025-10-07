@@ -1,6 +1,6 @@
-// Events/Log Screen with Advanced Filtering
+// Events/Log Screen with Advanced Filtering - PERFORMANCE OPTIMIZED
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, memo } from 'react';
 import {
   ScrollView,
   View,
@@ -32,13 +32,144 @@ import {
 } from '../../utils';
 import { EventType } from '../../types';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { LineChart } from 'react-native-chart-kit';
+// Replaced slow react-native-chart-kit with high-performance Skia charts
+import { SkiaLineChart } from '../../components/charts/SkiaLineChart';
+import { SkiaBarChart } from '../../components/charts/SkiaBarChart';
 
 const { width: screenWidth } = Dimensions.get('window');
 
 type TimeRange = 'hour' | 'day' | 'week' | 'month' | 'custom';
 type ConsumptionView = 'hourly' | 'daily' | 'weekly' | 'monthly' | 'custom';
 type TabType = 'events' | 'consumption';
+
+// Using high-performance Skia charts instead of react-native-chart-kit
+
+// PERFORMANCE: Extract heavy consumption overview component
+const ConsumptionOverview = memo(({
+  themeColors,
+  t,
+  formatDateLabel,
+  formatEnergy,
+  consumptionStartDate,
+  consumptionEndDate,
+  startHour,
+  endHour,
+  totalConsumption,
+  currentData,
+  maxConsumption,
+  avgConsumption,
+  daysDifference,
+  isMultipleDays,
+  currentHour,
+  onDateRangePress,
+  onHourRangePress,
+}: any) => (
+  <Card style={[styles.consumptionCard, { backgroundColor: themeColors.surface }]}>
+    <View style={styles.consumptionHeader}>
+      <View style={styles.consumptionTitleRow}>
+        <MaterialCommunityIcons name="lightning-bolt" size={24} color={themeColors.primary} />
+        <Text style={[styles.sectionTitle, { color: themeColors.text.primary, marginBottom: 0, marginLeft: spacing.sm }]}>
+          {t('events.consumption.title')}
+        </Text>
+      </View>
+    </View>
+
+    {/* Separate Filter Buttons */}
+    <View style={styles.filterButtonsRow}>
+      {/* Date Range Button */}
+      <TouchableOpacity
+        onPress={onDateRangePress}
+        style={[styles.filterButton, { backgroundColor: themeColors.surface, borderColor: themeColors.primary, borderWidth: 1.5 }]}
+      >
+        <Ionicons name="calendar-outline" size={16} color={themeColors.primary} />
+        <View style={styles.filterButtonContent}>
+          <Text style={[styles.filterButtonLabel, { color: themeColors.text.secondary }]}>
+            {t('events.consumption.dateRange')}
+          </Text>
+          <Text style={[styles.filterButtonValue, { color: themeColors.text.primary }]}>
+            {formatDateLabel(consumptionStartDate)} - {formatDateLabel(consumptionEndDate)}
+          </Text>
+        </View>
+      </TouchableOpacity>
+
+      {/* Hour Range Button */}
+      <TouchableOpacity
+        onPress={onHourRangePress}
+        style={[styles.filterButton, { backgroundColor: themeColors.surface, borderColor: themeColors.info, borderWidth: 1.5 }]}
+      >
+        <Ionicons name="time-outline" size={16} color={themeColors.info} />
+        <View style={styles.filterButtonContent}>
+          <Text style={[styles.filterButtonLabel, { color: themeColors.text.secondary }]}>
+            {t('events.consumption.hourRange')}
+          </Text>
+          <Text style={[styles.filterButtonValue, { color: themeColors.text.primary }]}>
+            {`${startHour.toString().padStart(2, '0')}:00`} - {`${endHour.toString().padStart(2, '0')}:00`}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    </View>
+
+    {/* Current Total Energy */}
+    <View style={[styles.currentEnergyCard, { backgroundColor: themeColors.primaryLight }]}>
+      <View style={styles.currentEnergyContent}>
+        <View style={styles.currentEnergyLeft}>
+          <Text style={[styles.currentEnergyLabel, { color: themeColors.text.secondary }]}>
+            {t('events.consumption.total')}
+          </Text>
+          <Text style={[styles.currentEnergyValue, { color: themeColors.primary }]}>
+            {formatEnergy(totalConsumption)}
+          </Text>
+          <Text style={[styles.currentEnergyDateRange, { color: themeColors.text.secondary }]}>
+            {formatDateLabel(consumptionStartDate)} - {formatDateLabel(consumptionEndDate)}
+          </Text>
+        </View>
+        <View style={[styles.energyIconContainer, { backgroundColor: themeColors.primary }]}>
+          <MaterialCommunityIcons name="flash" size={32} color="#FFFFFF" />
+        </View>
+      </View>
+    </View>
+
+    {/* High-Performance Skia Bar Chart */}
+    <View style={styles.chartContainer}>
+      <Text style={[styles.chartTitle, { color: themeColors.text.primary }]}>
+        {t('events.consumption.hourlyBreakdown')}
+      </Text>
+      <Text style={[styles.chartSubtitle, { color: themeColors.text.secondary }]}>
+        {currentData.length} {t('events.consumption.hours')}
+        {isMultipleDays && ` • ${daysDifference} ${t('common.days')}`}
+      </Text>
+      <SkiaBarChart
+        data={currentData.map((item: any) => ({
+          label: item.label,
+          value: item.kWh,
+          highlight: item.hourValue === currentHour,
+        }))}
+        maxValue={maxConsumption}
+        theme={themeColors === colors.dark ? 'dark' : 'light'}
+        primaryColor={themeColors.primary}
+        highlightColor={themeColors.primary}
+        formatValue={(v) => formatEnergy(v)}
+      />
+    </View>
+
+    {/* Consumption Stats */}
+    <View style={styles.consumptionStatsRow}>
+      <View style={styles.consumptionStatItem}>
+        <View style={[styles.consumptionStatIcon, { backgroundColor: themeColors.success + '20' }]}>
+          <Ionicons name="trending-down" size={16} color={themeColors.success} />
+        </View>
+        <View>
+          <Text style={[styles.consumptionStatValue, { color: themeColors.text.primary }]}>
+            {formatEnergy(avgConsumption)}
+          </Text>
+          <Text style={[styles.consumptionStatLabel, { color: themeColors.text.secondary }]}>
+            {t('events.consumption.average')}
+          </Text>
+        </View>
+      </View>
+    </View>
+  </Card>
+));
 
 export default function EventsScreen() {
   const { filter, setFilter, getFilteredEvents, getStatistics } = useEventsStore();
@@ -62,19 +193,35 @@ export default function EventsScreen() {
   const [showDateRangeModal, setShowDateRangeModal] = useState(false);
   const [showHourRangeModal, setShowHourRangeModal] = useState(false);
 
+  // PERFORMANCE: Use callback refs to prevent recreation
+  const today = useMemo(() => new Date(), []);
+
   // Consumption filter states - DEFAULT TO TODAY FOR BEST PERFORMANCE
-  const [consumptionStartDate, setConsumptionStartDate] = useState(new Date()); // TODAY
-  const [consumptionEndDate, setConsumptionEndDate] = useState(new Date()); // TODAY
+  const [consumptionStartDate, setConsumptionStartDate] = useState(today);
+  const [consumptionEndDate, setConsumptionEndDate] = useState(today);
   const [startHour, setStartHour] = useState(0);
   const [endHour, setEndHour] = useState(23);
   const [showConsumptionStartPicker, setShowConsumptionStartPicker] = useState(false);
   const [showConsumptionEndPicker, setShowConsumptionEndPicker] = useState(false);
 
+  // Pending filter states (for Apply button)
+  const [pendingStartDate, setPendingStartDate] = useState(today);
+  const [pendingEndDate, setPendingEndDate] = useState(today);
+  const [pendingStartHour, setPendingStartHour] = useState(0);
+  const [pendingEndHour, setPendingEndHour] = useState(23);
+  const [hasPendingChanges, setHasPendingChanges] = useState(false);
+
   // Event date range filter states
-  const [startDate, setStartDate] = useState(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
-  const [endDate, setEndDate] = useState(new Date());
+  const [startDate, setStartDate] = useState(() => new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
+  const [endDate, setEndDate] = useState(() => new Date());
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [showEndPicker, setShowEndPicker] = useState(false);
+
+  // Pending event filter states (for Apply button)
+  const [pendingEventStartDate, setPendingEventStartDate] = useState(() => new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
+  const [pendingEventEndDate, setPendingEventEndDate] = useState(() => new Date());
+  const [hasEventPendingChanges, setHasEventPendingChanges] = useState(false);
+  const [showEventFilterModal, setShowEventFilterModal] = useState(false);
 
   const events = getFilteredEvents();
   const stats = getStatistics();
@@ -82,11 +229,32 @@ export default function EventsScreen() {
   // Get current hour for highlighting
   const currentHour = new Date().getHours();
 
-  // OPTIMIZED: Memoize hourly consumption data generation - only recalculate when dates or hours change
+  // PERFORMANCE: Generate time series data helper - memoized
+  const generateTimeSeriesData = useCallback((points: number, baseValue: number, variance: number, includeSpike: boolean = false) => {
+    const data = [];
+    for (let i = 0; i < points; i++) {
+      let value = baseValue + (Math.random() - 0.5) * variance;
+
+      // Add realistic spike at a random point
+      if (includeSpike && i === Math.floor(points * 0.6)) {
+        value = baseValue + variance * 2.5;
+      }
+
+      // Add smooth variations
+      value += Math.sin(i / points * Math.PI * 2) * variance * 0.3;
+      data.push(parseFloat(value.toFixed(2)));
+    }
+    return data;
+  }, []);
+
+  // PERFORMANCE OPTIMIZED: Better memoization with specific dependencies
   const hourlyConsumption = useMemo(() => {
     const data = [];
     const currentDate = new Date(consumptionStartDate);
+    currentDate.setHours(0, 0, 0, 0); // Reset time to start of day
+
     const endDateObj = new Date(consumptionEndDate);
+    endDateObj.setHours(23, 59, 59, 999); // Set to end of day
 
     // Limit to prevent performance issues (max 7 days * 24 hours = 168 data points)
     const maxDays = 7;
@@ -111,46 +279,72 @@ export default function EventsScreen() {
     }
 
     return data;
-  }, [consumptionStartDate, consumptionEndDate, startHour, endHour]);
+  }, [consumptionStartDate.getTime(), consumptionEndDate.getTime(), startHour, endHour]);
 
-  // OPTIMIZED: Memoize time series data generation
-  const { voltageData, currentTrendData, powerData, powerFactorData, frequencyData } = useMemo(() => {
-    const generateTimeSeriesData = (points: number, baseValue: number, variance: number, includeSpike: boolean = false) => {
-      const data = [];
-      for (let i = 0; i < points; i++) {
-        let value = baseValue + (Math.random() - 0.5) * variance;
+  // PERFORMANCE: Separate time series data calculations
+  const voltageData = useMemo(() =>
+    generateTimeSeriesData(hourlyConsumption.length, 220, 8, true),
+    [hourlyConsumption.length, generateTimeSeriesData]
+  );
 
-        // Add realistic spike at a random point
-        if (includeSpike && i === Math.floor(points * 0.6)) {
-          value = baseValue + variance * 2.5;
-        }
+  const currentTrendData = useMemo(() =>
+    generateTimeSeriesData(hourlyConsumption.length, 3, 1.5, true),
+    [hourlyConsumption.length, generateTimeSeriesData]
+  );
 
-        // Add smooth variations
-        value += Math.sin(i / points * Math.PI * 2) * variance * 0.3;
-        data.push(parseFloat(value.toFixed(2)));
-      }
-      return data;
-    };
+  const powerData = useMemo(() =>
+    generateTimeSeriesData(hourlyConsumption.length, 660, 200, false),
+    [hourlyConsumption.length, generateTimeSeriesData]
+  );
 
-    return {
-      voltageData: generateTimeSeriesData(hourlyConsumption.length, 220, 8, true),
-      currentTrendData: generateTimeSeriesData(hourlyConsumption.length, 3, 1.5, true),
-      powerData: generateTimeSeriesData(hourlyConsumption.length, 660, 200, false),
-      powerFactorData: generateTimeSeriesData(hourlyConsumption.length, 0.95, 0.08, false),
-      frequencyData: generateTimeSeriesData(hourlyConsumption.length, 50.0, 0.3, false),
-    };
-  }, [hourlyConsumption.length]);
+  const powerFactorData = useMemo(() =>
+    generateTimeSeriesData(hourlyConsumption.length, 0.95, 0.08, false),
+    [hourlyConsumption.length, generateTimeSeriesData]
+  );
 
-  // OPTIMIZED: Memoize day calculations
+  const frequencyData = useMemo(() =>
+    generateTimeSeriesData(hourlyConsumption.length, 50.0, 0.3, false),
+    [hourlyConsumption.length, generateTimeSeriesData]
+  );
+
+  // Safe stats for each series
+  const voltageStats = useMemo(() => {
+    const arr = voltageData; if (!arr || arr.length === 0) return { has:false, min:0, max:0, avg:0 } as const;
+    const sum = arr.reduce((a,b)=>a+b,0);
+    return { has:true, min: Math.min(...arr), max: Math.max(...arr), avg: sum/arr.length } as const;
+  }, [voltageData]);
+  const currentStats = useMemo(() => {
+    const arr = currentTrendData; if (!arr || arr.length === 0) return { has:false, min:0, max:0, avg:0 } as const;
+    const sum = arr.reduce((a,b)=>a+b,0);
+    return { has:true, min: Math.min(...arr), max: Math.max(...arr), avg: sum/arr.length } as const;
+  }, [currentTrendData]);
+  const powerStats = useMemo(() => {
+    const arr = powerData; if (!arr || arr.length === 0) return { has:false, min:0, max:0, avg:0 } as const;
+    const sum = arr.reduce((a,b)=>a+b,0);
+    return { has:true, min: Math.min(...arr), max: Math.max(...arr), avg: sum/arr.length } as const;
+  }, [powerData]);
+  const pfStats = useMemo(() => {
+    const arr = powerFactorData; if (!arr || arr.length === 0) return { has:false, min:0, max:0, avg:0 } as const;
+    const sum = arr.reduce((a,b)=>a+b,0);
+    return { has:true, min: Math.min(...arr), max: Math.max(...arr), avg: sum/arr.length } as const;
+  }, [powerFactorData]);
+  const freqStats = useMemo(() => {
+    const arr = frequencyData; if (!arr || arr.length === 0) return { has:false, min:0, max:0, avg:0 } as const;
+    const sum = arr.reduce((a,b)=>a+b,0);
+    return { has:true, min: Math.min(...arr), max: Math.max(...arr), avg: sum/arr.length } as const;
+  }, [frequencyData]);
+
+
+  // PERFORMANCE: Memoize day calculations
   const { daysDifference, isMultipleDays } = useMemo(() => {
     const diff = Math.ceil((consumptionEndDate.getTime() - consumptionStartDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
     return {
       daysDifference: diff,
       isMultipleDays: diff > 1
     };
-  }, [consumptionStartDate, consumptionEndDate]);
+  }, [consumptionStartDate.getTime(), consumptionEndDate.getTime()]);
 
-  // OPTIMIZED: Memoize graph labels
+  // PERFORMANCE: Memoize graph labels
   const graphLabels = useMemo(() => {
     const filterInterval = isMultipleDays ? (isRTL ? 4 : 3) : (isRTL ? 3 : 2);
     const labels = hourlyConsumption
@@ -167,7 +361,7 @@ export default function EventsScreen() {
     return isRTL ? labels.reverse() : labels;
   }, [hourlyConsumption, isMultipleDays, isRTL]);
 
-  // OPTIMIZED: Memoize consumption data and calculations
+  // PERFORMANCE: Memoize consumption data and calculations
   const { currentData, maxConsumption, totalConsumption, avgConsumption } = useMemo(() => {
     const data = hourlyConsumption.map((item) => ({
       ...item,
@@ -180,7 +374,7 @@ export default function EventsScreen() {
       currentData: data,
       maxConsumption: Math.max(...data.map((d: any) => d.kWh)),
       totalConsumption: total,
-      avgConsumption: total / data.length
+      avgConsumption: data.length > 0 ? total / data.length : 0
     };
   }, [hourlyConsumption, isMultipleDays]);
 
@@ -189,224 +383,138 @@ export default function EventsScreen() {
     { label: t('events.safetyFilter.types.overvoltage'), value: 'overvoltage', icon: 'arrow-up-circle' },
     { label: t('events.safetyFilter.types.undervoltage'), value: 'undervoltage', icon: 'arrow-down-circle' },
     { label: t('events.safetyFilter.types.overload'), value: 'overload', icon: 'warning' },
-    { label: 'Underload', value: 'underload', icon: 'arrow-down' },
+    { label: t('events.safetyFilter.types.underload'), value: 'underload', icon: 'arrow-down' },
     { label: t('events.safetyFilter.types.outage'), value: 'outage', icon: 'flash-off' },
-    { label: 'Frequency Min', value: 'frequency_min', icon: 'pulse' },
-    { label: 'Frequency Max', value: 'frequency_max', icon: 'pulse' },
-    { label: 'Power Factor Low', value: 'power_factor_min', icon: 'analytics' },
+    { label: t('events.safetyFilter.types.frequencyMin'), value: 'frequency_min', icon: 'pulse' },
+    { label: t('events.safetyFilter.types.frequencyMax'), value: 'frequency_max', icon: 'pulse' },
+    { label: t('events.safetyFilter.types.powerFactorLow'), value: 'power_factor_min', icon: 'analytics' },
   ];
 
-  const toggleEventType = (type: EventType) => {
+  // PERFORMANCE: Use callbacks for event handlers
+  const toggleEventType = useCallback((type: EventType) => {
     setSelectedEventTypes(prev =>
       prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
     );
-  };
+  }, []);
 
   // Format date for display
-  const formatDateLabel = (date: Date) => formatDate(date.getTime());
-  const formatTimeLabel = (date: Date) => formatTime(date.getTime());
+  const formatDateLabel = useCallback((date: Date) => formatDate(date.getTime()), []);
+  const formatTimeLabel = useCallback((date: Date) => formatTime(date.getTime()), []);
 
-  // Handle event date picker changes
-  const onStartDateChange = (event: any, selectedDate?: Date) => {
+  // PERFORMANCE: Memoized event handlers
+  const onStartDateChange = useCallback((event: any, selectedDate?: Date) => {
     setShowStartPicker(Platform.OS === 'ios');
     if (selectedDate) {
-      setStartDate(selectedDate);
+      setPendingEventStartDate(selectedDate);
+      setHasEventPendingChanges(true);
     }
-  };
+  }, []);
 
-  const onEndDateChange = (event: any, selectedDate?: Date) => {
+  const onEndDateChange = useCallback((event: any, selectedDate?: Date) => {
     setShowEndPicker(Platform.OS === 'ios');
     if (selectedDate) {
-      setEndDate(selectedDate);
+      setPendingEventEndDate(selectedDate);
+      setHasEventPendingChanges(true);
     }
-  };
+  }, []);
 
-  // Handle consumption date picker changes
-  const onConsumptionStartDateChange = (event: any, selectedDate?: Date) => {
+  // Apply event filter changes
+  const handleApplyEventFilters = useCallback(() => {
+    setStartDate(pendingEventStartDate);
+    setEndDate(pendingEventEndDate);
+    setHasEventPendingChanges(false);
+    setShowEventFilterModal(false);
+  }, [pendingEventStartDate, pendingEventEndDate]);
+
+  // Cancel event filter changes
+  const handleCancelEventFilters = useCallback(() => {
+    setPendingEventStartDate(startDate);
+    setPendingEventEndDate(endDate);
+    setHasEventPendingChanges(false);
+    setShowEventFilterModal(false);
+  }, [startDate, endDate]);
+
+  const onConsumptionStartDateChange = useCallback((event: any, selectedDate?: Date) => {
     setShowConsumptionStartPicker(Platform.OS === 'ios');
     if (selectedDate) {
-      setConsumptionStartDate(selectedDate);
+      setPendingStartDate(selectedDate);
+      setHasPendingChanges(true);
     }
-  };
+  }, []);
 
-  const onConsumptionEndDateChange = (event: any, selectedDate?: Date) => {
+  const onConsumptionEndDateChange = useCallback((event: any, selectedDate?: Date) => {
     setShowConsumptionEndPicker(Platform.OS === 'ios');
     if (selectedDate) {
-      setConsumptionEndDate(selectedDate);
+      setPendingEndDate(selectedDate);
+      setHasPendingChanges(true);
     }
-  };
+  }, []);
 
-  // MEMOIZED: Only re-render when actual data or theme changes, NOT on every state update
-  const consumptionOverview = useMemo(() => (
-    <Card style={[styles.consumptionCard, { backgroundColor: themeColors.surface }]}>
-      <View style={styles.consumptionHeader}>
-        <View style={styles.consumptionTitleRow}>
-          <MaterialCommunityIcons name="lightning-bolt" size={24} color={themeColors.primary} />
-          <Text style={[styles.sectionTitle, { color: themeColors.text.primary, marginBottom: 0, marginLeft: spacing.sm }]}>
-            {t('events.consumption.title')}
-          </Text>
-        </View>
-      </View>
+  // Apply filter changes
+  const handleApplyFilters = useCallback(() => {
+    setConsumptionStartDate(pendingStartDate);
+    setConsumptionEndDate(pendingEndDate);
+    setStartHour(pendingStartHour);
+    setEndHour(pendingEndHour);
+    setHasPendingChanges(false);
+    setShowDateRangeModal(false);
+    setShowHourRangeModal(false);
+  }, [pendingStartDate, pendingEndDate, pendingStartHour, pendingEndHour]);
 
-      {/* Separate Filter Buttons */}
-      <View style={styles.filterButtonsRow}>
-        {/* Date Range Button */}
-        <TouchableOpacity
-          onPress={() => setShowDateRangeModal(true)}
-          style={[styles.filterButton, { backgroundColor: themeColors.surface, borderColor: themeColors.primary, borderWidth: 1.5 }]}
-        >
-          <Ionicons name="calendar-outline" size={16} color={themeColors.primary} />
-          <View style={styles.filterButtonContent}>
-            <Text style={[styles.filterButtonLabel, { color: themeColors.text.secondary }]}>
-              {t('events.consumption.dateRange')}
-            </Text>
-            <Text style={[styles.filterButtonValue, { color: themeColors.text.primary }]}>
-              {formatDateLabel(consumptionStartDate)} - {formatDateLabel(consumptionEndDate)}
-            </Text>
-          </View>
-        </TouchableOpacity>
+  // Cancel filter changes
+  const handleCancelFilters = useCallback(() => {
+    setPendingStartDate(consumptionStartDate);
+    setPendingEndDate(consumptionEndDate);
+    setPendingStartHour(startHour);
+    setPendingEndHour(endHour);
+    setHasPendingChanges(false);
+    setShowDateRangeModal(false);
+    setShowHourRangeModal(false);
+  }, [consumptionStartDate, consumptionEndDate, startHour, endHour]);
 
-        {/* Hour Range Button */}
-        <TouchableOpacity
-          onPress={() => setShowHourRangeModal(true)}
-          style={[styles.filterButton, { backgroundColor: themeColors.surface, borderColor: themeColors.info, borderWidth: 1.5 }]}
-        >
-          <Ionicons name="time-outline" size={16} color={themeColors.info} />
-          <View style={styles.filterButtonContent}>
-            <Text style={[styles.filterButtonLabel, { color: themeColors.text.secondary }]}>
-              {t('events.consumption.hourRange')}
-            </Text>
-            <Text style={[styles.filterButtonValue, { color: themeColors.text.primary }]}>
-              {`${startHour.toString().padStart(2, '0')}:00`} - {`${endHour.toString().padStart(2, '0')}:00`}
-            </Text>
-          </View>
-        </TouchableOpacity>
-      </View>
+  // PERFORMANCE: Memoize modal handlers
+  const handleDateRangePress = useCallback(() => {
+    setPendingStartDate(consumptionStartDate);
+    setPendingEndDate(consumptionEndDate);
+    setHasPendingChanges(false);
+    setShowDateRangeModal(true);
+  }, [consumptionStartDate, consumptionEndDate]);
 
-      {/* Current Total Energy */}
-      <View style={[styles.currentEnergyCard, { backgroundColor: themeColors.primaryLight }]}>
-        <View style={styles.currentEnergyContent}>
-          <View style={styles.currentEnergyLeft}>
-            <Text style={[styles.currentEnergyLabel, { color: themeColors.text.secondary }]}>
-              {t('events.consumption.total')}
-            </Text>
-            <Text style={[styles.currentEnergyValue, { color: themeColors.primary }]}>
-              {formatEnergy(totalConsumption)}
-            </Text>
-            <Text style={[styles.currentEnergyDateRange, { color: themeColors.text.secondary }]}>
-              {formatDateLabel(consumptionStartDate)} - {formatDateLabel(consumptionEndDate)}
-            </Text>
-          </View>
-          <View style={[styles.energyIconContainer, { backgroundColor: themeColors.primary }]}>
-            <MaterialCommunityIcons name="flash" size={32} color="#FFFFFF" />
-          </View>
-        </View>
-      </View>
+  const handleHourRangePress = useCallback(() => {
+    setPendingStartHour(startHour);
+    setPendingEndHour(endHour);
+    setHasPendingChanges(false);
+    setShowHourRangeModal(true);
+  }, [startHour, endHour]);
 
-      {/* Bar Chart */}
-      <View style={styles.chartContainer}>
-        <Text style={[styles.chartTitle, { color: themeColors.text.primary }]}>
-          {t('events.consumption.hourlyBreakdown')}
-        </Text>
-        <Text style={[styles.chartSubtitle, { color: themeColors.text.secondary }]}>
-          {currentData.length} {t('events.consumption.hours')}
-          {isMultipleDays && ` • ${daysDifference} ${t('common.days')}`}
-        </Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.barChart}
-        >
-          {currentData.map((item: any, index: number) => {
-            const height = (item.kWh / maxConsumption) * 100;
-            const isCurrent = item.hourValue === currentHour;
+  const closeDateRangeModal = useCallback(() => {
+    if (hasPendingChanges) {
+      handleCancelFilters();
+    } else {
+      setShowDateRangeModal(false);
+    }
+  }, [hasPendingChanges, handleCancelFilters]);
 
-            return (
-              <View key={index} style={styles.barColumn}>
-                <View style={styles.barContainer}>
-                  <View
-                    style={[
-                      styles.bar,
-                      {
-                        height: `${height}%`,
-                        backgroundColor: isCurrent ? themeColors.primary : themeColors.text.disabled,
-                      }
-                    ]}
-                  />
-                </View>
-                <Text style={[styles.barLabel, { color: themeColors.text.secondary }]}>
-                  {item.label}
-                </Text>
-                <Text style={[styles.barValue, {
-                  color: isCurrent ? themeColors.primary : themeColors.text.secondary
-                }]}>
-                  {formatEnergy(item.kWh)}
-                </Text>
-              </View>
-            );
-          })}
-        </ScrollView>
-      </View>
+  const closeHourRangeModal = useCallback(() => {
+    if (hasPendingChanges) {
+      handleCancelFilters();
+    } else {
+      setShowHourRangeModal(false);
+    }
+  }, [hasPendingChanges, handleCancelFilters]);
 
-      {/* Consumption Stats */}
-      <View style={styles.consumptionStatsRow}>
-        <View style={styles.consumptionStatItem}>
-          <View style={[styles.consumptionStatIcon, { backgroundColor: themeColors.success + '20' }]}>
-            <Ionicons name="trending-down" size={16} color={themeColors.success} />
-          </View>
-          <View>
-            <Text style={[styles.consumptionStatValue, { color: themeColors.text.primary }]}>
-              {formatEnergy(avgConsumption)}
-            </Text>
-            <Text style={[styles.consumptionStatLabel, { color: themeColors.text.secondary }]}>
-              {t('events.consumption.average')}
-            </Text>
-          </View>
-        </View>
-      </View>
-    </Card>
-  ), [currentData, maxConsumption, avgConsumption, totalConsumption, daysDifference, consumptionStartDate, consumptionEndDate, startHour, endHour, themeColors, t, formatEnergy, formatDateLabel]);
+  // Chart configuration removed - Skia charts handle their own config
 
-  // OPTIMIZED: Memoize chart width calculation
-  const chartWidth = useMemo(() => {
-    const baseWidth = screenWidth - spacing.lg * 2;
-    const dataPointWidth = isRTL ? 60 : 50;
-    return Math.max(baseWidth, graphLabels.length * dataPointWidth);
-  }, [graphLabels.length, isRTL]);
-
-  // OPTIMIZED: Memoize chart configuration
-  const chartConfig = useMemo(() => ({
-    backgroundGradientFrom: themeColors.surface,
-    backgroundGradientTo: themeColors.surface,
-    decimalPlaces: 1,
-    color: (opacity = 1) => `rgba(66, 165, 245, ${opacity})`,
-    labelColor: (opacity = 1) => theme === 'dark'
-      ? `rgba(255, 255, 255, ${opacity * 0.6})`
-      : `rgba(0, 0, 0, ${opacity * 0.6})`,
-    style: {
-      borderRadius: borderRadius.medium,
-    },
-    propsForDots: {
-      r: '3',
-      strokeWidth: '1',
-    },
-    propsForLabels: {
-      fontSize: 9,
-    },
-  }), [themeColors.surface, theme]);
-
-  // MEMOIZED: Expensive charts only re-render when data actually changes
+  // PERFORMANCE: Memoized parameter graphs component
   const parameterGraphs = useMemo(() => {
-    // Use memoized values
-    const labels = graphLabels;
 
     return (
       <View style={styles.graphsSection}>
         <Text style={[styles.sectionTitle, { color: themeColors.text.primary }]}>
-          Parameter Trends
+          {t('events.graphs.title')}
         </Text>
         <Text style={[styles.sectionSubtitle, { color: themeColors.text.secondary }]}>
-          Analyze electrical parameters over time
+          {t('events.graphs.subtitle')}
         </Text>
 
         {/* Voltage Graph */}
@@ -418,53 +526,47 @@ export default function EventsScreen() {
                 {t('events.graphs.voltage.title')}
               </Text>
             </View>
-            <View style={styles.graphStats}>
-              <View style={styles.graphStat}>
-                <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.max')}</Text>
-                <Text style={[styles.graphStatValue, { color: themeColors.danger }]}>
-                  {formatVoltage(Math.max(...voltageData))}
-                </Text>
+            {voltageStats.has && (
+              <View style={styles.graphStats}>
+                <View style={styles.graphStat}>
+                  <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.max')}</Text>
+                  <Text style={[styles.graphStatValue, { color: themeColors.danger }]}>
+                    {formatVoltage(voltageStats.max)}
+                  </Text>
+                </View>
+                <View style={styles.graphStat}>
+                  <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.avg')}</Text>
+                  <Text style={[styles.graphStatValue, { color: themeColors.text.primary }]}>
+                    {formatVoltage(voltageStats.avg)}
+                  </Text>
+                </View>
+                <View style={styles.graphStat}>
+                  <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.min')}</Text>
+                  <Text style={[styles.graphStatValue, { color: themeColors.success }]}>
+                    {formatVoltage(voltageStats.min)}
+                  </Text>
+                </View>
               </View>
-              <View style={styles.graphStat}>
-                <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.avg')}</Text>
-                <Text style={[styles.graphStatValue, { color: themeColors.text.primary }]}>
-                  {formatVoltage(voltageData.reduce((a, b) => a + b, 0) / voltageData.length)}
-                </Text>
-              </View>
-              <View style={styles.graphStat}>
-                <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.min')}</Text>
-                <Text style={[styles.graphStatValue, { color: themeColors.success }]}>
-                  {formatVoltage(Math.min(...voltageData))}
-                </Text>
-              </View>
-            </View>
+            )}
           </View>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <LineChart
-              data={{
-                labels: labels,
-                datasets: [{ data: isRTL ? voltageData.slice().reverse() : voltageData }],
-              }}
-              width={chartWidth}
-              height={220}
-              chartConfig={{
-                ...chartConfig,
-                color: (opacity = 1) => `rgba(66, 165, 245, ${opacity})`, // Blue for voltage
-              }}
-              bezier
-              style={styles.chart}
-              withInnerLines={true}
-              withOuterLines={true}
-              withVerticalLines={false}
-              withHorizontalLines={true}
-              fromZero={false}
-            />
-          </ScrollView>
+          <SkiaLineChart
+            data={isRTL ? voltageData.slice().reverse() : voltageData}
+            title=""
+            color="#42A5F5"
+            unit={t('home.units.voltage')}
+            height={200}
+            animated={true}
+            theme={theme}
+            showStats={false}
+            min={voltageStats.has ? voltageStats.min : undefined}
+            max={voltageStats.has ? voltageStats.max : undefined}
+            average={voltageStats.has ? voltageStats.avg : undefined}
+          />
 
           <View style={[styles.safetyRange, { backgroundColor: themeColors.background }]}>
             <Text style={[styles.safetyRangeText, { color: themeColors.text.secondary }]}>
-              Safe Range: 200V - 240V
+              {t('events.graphs.voltage.safeRange')}
             </Text>
           </View>
         </Card>
@@ -478,49 +580,43 @@ export default function EventsScreen() {
                 {t('events.graphs.current.title')}
               </Text>
             </View>
-            <View style={styles.graphStats}>
-              <View style={styles.graphStat}>
-                <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.max')}</Text>
-                <Text style={[styles.graphStatValue, { color: themeColors.danger }]}>
-                  {formatCurrent(Math.max(...currentTrendData))}
-                </Text>
+            {currentStats.has && (
+              <View style={styles.graphStats}>
+                <View style={styles.graphStat}>
+                  <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.max')}</Text>
+                  <Text style={[styles.graphStatValue, { color: themeColors.danger }]}>
+                    {formatCurrent(currentStats.max)}
+                  </Text>
+                </View>
+                <View style={styles.graphStat}>
+                  <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.avg')}</Text>
+                  <Text style={[styles.graphStatValue, { color: themeColors.text.primary }]}>
+                    {formatCurrent(currentStats.avg)}
+                  </Text>
+                </View>
+                <View style={styles.graphStat}>
+                  <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.min')}</Text>
+                  <Text style={[styles.graphStatValue, { color: themeColors.success }]}>
+                    {formatCurrent(currentStats.min)}
+                  </Text>
+                </View>
               </View>
-              <View style={styles.graphStat}>
-                <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.avg')}</Text>
-                <Text style={[styles.graphStatValue, { color: themeColors.text.primary }]}>
-                  {formatCurrent(currentTrendData.reduce((a, b) => a + b, 0) / currentTrendData.length)}
-                </Text>
-              </View>
-              <View style={styles.graphStat}>
-                <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.min')}</Text>
-                <Text style={[styles.graphStatValue, { color: themeColors.success }]}>
-                  {formatCurrent(Math.min(...currentTrendData))}
-                </Text>
-              </View>
-            </View>
+            )}
           </View>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <LineChart
-              data={{
-                labels: labels,
-                datasets: [{ data: isRTL ? currentTrendData.slice().reverse() : currentTrendData }],
-              }}
-              width={chartWidth}
-              height={220}
-              chartConfig={{
-                ...chartConfig,
-                color: (opacity = 1) => `rgba(255, 167, 38, ${opacity})`, // Orange for current
-              }}
-              bezier
-              style={styles.chart}
-              withInnerLines={true}
-              withOuterLines={true}
-              withVerticalLines={false}
-              withHorizontalLines={true}
-              fromZero={true}
-            />
-          </ScrollView>
+          <SkiaLineChart
+            data={isRTL ? currentTrendData.slice().reverse() : currentTrendData}
+            title=""
+            color="#FFA726"
+            unit={t('home.units.current')}
+            height={200}
+            animated={true}
+            theme={theme}
+            showStats={false}
+            min={currentStats.has ? currentStats.min : undefined}
+            max={currentStats.has ? currentStats.max : undefined}
+            average={currentStats.has ? currentStats.avg : undefined}
+          />
 
           <View style={[styles.safetyRange, { backgroundColor: themeColors.background }]}>
             <Text style={[styles.safetyRangeText, { color: themeColors.text.secondary }]}>
@@ -538,49 +634,43 @@ export default function EventsScreen() {
                 {t('events.graphs.power.title')}
               </Text>
             </View>
-            <View style={styles.graphStats}>
-              <View style={styles.graphStat}>
-                <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.max')}</Text>
-                <Text style={[styles.graphStatValue, { color: themeColors.danger }]}>
-                  {formatPower(Math.max(...powerData))}
-                </Text>
+            {powerStats.has && (
+              <View style={styles.graphStats}>
+                <View style={styles.graphStat}>
+                  <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.max')}</Text>
+                  <Text style={[styles.graphStatValue, { color: themeColors.danger }]}>
+                    {formatPower(powerStats.max)}
+                  </Text>
+                </View>
+                <View style={styles.graphStat}>
+                  <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.avg')}</Text>
+                  <Text style={[styles.graphStatValue, { color: themeColors.text.primary }]}>
+                    {formatPower(powerStats.avg)}
+                  </Text>
+                </View>
+                <View style={styles.graphStat}>
+                  <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.min')}</Text>
+                  <Text style={[styles.graphStatValue, { color: themeColors.success }]}>
+                    {formatPower(powerStats.min)}
+                  </Text>
+                </View>
               </View>
-              <View style={styles.graphStat}>
-                <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.avg')}</Text>
-                <Text style={[styles.graphStatValue, { color: themeColors.text.primary }]}>
-                  {formatPower(powerData.reduce((a, b) => a + b, 0) / powerData.length)}
-                </Text>
-              </View>
-              <View style={styles.graphStat}>
-                <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.min')}</Text>
-                <Text style={[styles.graphStatValue, { color: themeColors.success }]}>
-                  {formatPower(Math.min(...powerData))}
-                </Text>
-              </View>
-            </View>
+            )}
           </View>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <LineChart
-              data={{
-                labels: labels,
-                datasets: [{ data: isRTL ? powerData.slice().reverse() : powerData }],
-              }}
-              width={chartWidth}
-              height={220}
-              chartConfig={{
-                ...chartConfig,
-                color: (opacity = 1) => `rgba(76, 175, 80, ${opacity})`, // Green for power
-              }}
-              bezier
-              style={styles.chart}
-              withInnerLines={true}
-              withOuterLines={true}
-              withVerticalLines={false}
-              withHorizontalLines={true}
-              fromZero={true}
-            />
-          </ScrollView>
+          <SkiaLineChart
+            data={isRTL ? powerData.slice().reverse() : powerData}
+            title=""
+            color="#66BB6A"
+            unit={t('home.units.power')}
+            height={200}
+            animated={true}
+            theme={theme}
+            showStats={false}
+            min={powerStats.has ? powerStats.min : undefined}
+            max={powerStats.has ? powerStats.max : undefined}
+            average={powerStats.has ? powerStats.avg : undefined}
+          />
         </Card>
 
         {/* Power Factor Graph */}
@@ -589,56 +679,50 @@ export default function EventsScreen() {
             <View style={styles.graphTitleRow}>
               <Ionicons name="analytics" size={20} color={themeColors.secondary} />
               <Text style={[styles.graphTitle, { color: themeColors.text.primary }]}>
-                Power Factor
+                {t('events.graphs.powerFactor.title')}
               </Text>
             </View>
-            <View style={styles.graphStats}>
-              <View style={styles.graphStat}>
-                <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.max')}</Text>
-                <Text style={[styles.graphStatValue, { color: themeColors.success }]}>
-                  {formatPowerFactor(Math.max(...powerFactorData))}
-                </Text>
+            {pfStats.has && (
+              <View style={styles.graphStats}>
+                <View style={styles.graphStat}>
+                  <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.max')}</Text>
+                  <Text style={[styles.graphStatValue, { color: themeColors.success }]}>
+                    {formatPowerFactor(pfStats.max)}
+                  </Text>
+                </View>
+                <View style={styles.graphStat}>
+                  <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.avg')}</Text>
+                  <Text style={[styles.graphStatValue, { color: themeColors.text.primary }]}>
+                    {formatPowerFactor(pfStats.avg)}
+                  </Text>
+                </View>
+                <View style={styles.graphStat}>
+                  <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.min')}</Text>
+                  <Text style={[styles.graphStatValue, { color: themeColors.warning }]}>
+                    {formatPowerFactor(pfStats.min)}
+                  </Text>
+                </View>
               </View>
-              <View style={styles.graphStat}>
-                <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.avg')}</Text>
-                <Text style={[styles.graphStatValue, { color: themeColors.text.primary }]}>
-                  {formatPowerFactor(powerFactorData.reduce((a, b) => a + b, 0) / powerFactorData.length)}
-                </Text>
-              </View>
-              <View style={styles.graphStat}>
-                <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.min')}</Text>
-                <Text style={[styles.graphStatValue, { color: themeColors.warning }]}>
-                  {formatPowerFactor(Math.min(...powerFactorData))}
-                </Text>
-              </View>
-            </View>
+            )}
           </View>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <LineChart
-              data={{
-                labels: labels,
-                datasets: [{ data: isRTL ? powerFactorData.slice().reverse() : powerFactorData }],
-              }}
-              width={chartWidth}
-              height={220}
-              chartConfig={{
-                ...chartConfig,
-                color: (opacity = 1) => `rgba(156, 39, 176, ${opacity})`, // Purple for power factor
-              }}
-              bezier
-              style={styles.chart}
-              withInnerLines={true}
-              withOuterLines={true}
-              withVerticalLines={false}
-              withHorizontalLines={true}
-              fromZero={false}
-            />
-          </ScrollView>
+          <SkiaLineChart
+            data={isRTL ? powerFactorData.slice().reverse() : powerFactorData}
+            title=""
+            color="#AB47BC"
+            unit=""
+            height={200}
+            animated={true}
+            theme={theme}
+            showStats={false}
+            min={pfStats.has ? pfStats.min : undefined}
+            max={pfStats.has ? pfStats.max : undefined}
+            average={pfStats.has ? pfStats.avg : undefined}
+          />
 
           <View style={[styles.safetyRange, { backgroundColor: themeColors.background }]}>
             <Text style={[styles.safetyRangeText, { color: themeColors.text.secondary }]}>
-              Good Range: 0.85 - 1.0
+              {t('events.graphs.powerFactor.goodRange')}
             </Text>
           </View>
         </Card>
@@ -649,65 +733,59 @@ export default function EventsScreen() {
             <View style={styles.graphTitleRow}>
               <Ionicons name="pulse" size={20} color={themeColors.info} />
               <Text style={[styles.graphTitle, { color: themeColors.text.primary }]}>
-                Frequency
+                {t('events.graphs.frequency.title')}
               </Text>
             </View>
-            <View style={styles.graphStats}>
-              <View style={styles.graphStat}>
-                <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.max')}</Text>
-                <Text style={[styles.graphStatValue, { color: themeColors.danger }]}>
-                  {formatFrequency(Math.max(...frequencyData))}
-                </Text>
+            {freqStats.has && (
+              <View style={styles.graphStats}>
+                <View style={styles.graphStat}>
+                  <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.max')}</Text>
+                  <Text style={[styles.graphStatValue, { color: themeColors.danger }]}>
+                    {formatFrequency(freqStats.max)}
+                  </Text>
+                </View>
+                <View style={styles.graphStat}>
+                  <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.avg')}</Text>
+                  <Text style={[styles.graphStatValue, { color: themeColors.text.primary }]}>
+                    {formatFrequency(freqStats.avg)}
+                  </Text>
+                </View>
+                <View style={styles.graphStat}>
+                  <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.min')}</Text>
+                  <Text style={[styles.graphStatValue, { color: themeColors.success }]}>
+                    {formatFrequency(freqStats.min)}
+                  </Text>
+                </View>
               </View>
-              <View style={styles.graphStat}>
-                <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.avg')}</Text>
-                <Text style={[styles.graphStatValue, { color: themeColors.text.primary }]}>
-                  {formatFrequency(frequencyData.reduce((a, b) => a + b, 0) / frequencyData.length)}
-                </Text>
-              </View>
-              <View style={styles.graphStat}>
-                <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.min')}</Text>
-                <Text style={[styles.graphStatValue, { color: themeColors.success }]}>
-                  {formatFrequency(Math.min(...frequencyData))}
-                </Text>
-              </View>
-            </View>
+            )}
           </View>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <LineChart
-              data={{
-                labels: labels,
-                datasets: [{ data: isRTL ? frequencyData.slice().reverse() : frequencyData }],
-              }}
-              width={chartWidth}
-              height={220}
-              chartConfig={{
-                ...chartConfig,
-                color: (opacity = 1) => `rgba(0, 188, 212, ${opacity})`, // Cyan for frequency
-              }}
-              bezier
-              style={styles.chart}
-              withInnerLines={true}
-              withOuterLines={true}
-              withVerticalLines={false}
-              withHorizontalLines={true}
-              fromZero={false}
-            />
-          </ScrollView>
+          <SkiaLineChart
+            data={isRTL ? frequencyData.slice().reverse() : frequencyData}
+            title=""
+            color="#26C6DA"
+            unit={t('home.units.frequency')}
+            height={200}
+            animated={true}
+            theme={theme}
+            showStats={false}
+            min={freqStats.has ? freqStats.min : undefined}
+            max={freqStats.has ? freqStats.max : undefined}
+            average={freqStats.has ? freqStats.avg : undefined}
+          />
 
           <View style={[styles.safetyRange, { backgroundColor: themeColors.background }]}>
             <Text style={[styles.safetyRangeText, { color: themeColors.text.secondary }]}>
-              Standard: 50 Hz ±0.5 Hz
+              {t('events.graphs.frequency.standard')}
             </Text>
           </View>
         </Card>
       </View>
     );
-  }, [graphLabels, voltageData, currentTrendData, powerData, powerFactorData, frequencyData, chartWidth, chartConfig, isRTL, themeColors, t]);
+  }, [graphLabels, voltageData, currentTrendData, powerData, powerFactorData, frequencyData, isRTL, themeColors, t, theme]);
 
   // Render date range picker
-  const renderDateRangePicker = () => (
+  const renderDateRangePicker = useCallback(() => (
     <Card style={[styles.dateRangeCard, { backgroundColor: themeColors.surface }]}>
       <View style={styles.dateRangeHeader}>
         <Ionicons name="calendar" size={20} color={themeColors.primary} />
@@ -751,13 +829,14 @@ export default function EventsScreen() {
             const today = new Date();
             const oneWeekAgo = new Date();
             oneWeekAgo.setDate(oneWeekAgo.getDate() - 6);
-            setStartDate(oneWeekAgo);
-            setEndDate(today);
+            setPendingEventStartDate(oneWeekAgo);
+            setPendingEventEndDate(today);
+            setHasEventPendingChanges(true);
           }}
           style={[styles.presetButton, { backgroundColor: themeColors.background, borderColor: themeColors.primary }]}
         >
           <Text style={[styles.presetButtonText, { color: themeColors.text.primary }]}>
-            Last Week
+            {t('events.presets.lastWeek')}
           </Text>
         </TouchableOpacity>
 
@@ -766,13 +845,14 @@ export default function EventsScreen() {
             const today = new Date();
             const oneMonthAgo = new Date();
             oneMonthAgo.setDate(oneMonthAgo.getDate() - 29);
-            setStartDate(oneMonthAgo);
-            setEndDate(today);
+            setPendingEventStartDate(oneMonthAgo);
+            setPendingEventEndDate(today);
+            setHasEventPendingChanges(true);
           }}
           style={[styles.presetButton, { backgroundColor: themeColors.background, borderColor: themeColors.primary }]}
         >
           <Text style={[styles.presetButtonText, { color: themeColors.text.primary }]}>
-            Last Month
+            {t('events.presets.lastMonth')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -824,29 +904,52 @@ export default function EventsScreen() {
       {/* Date Pickers */}
       {showStartPicker && (
         <DateTimePicker
-          value={startDate}
+          value={pendingEventStartDate}
           mode="datetime"
           display={Platform.OS === 'ios' ? 'spinner' : 'default'}
           onChange={onStartDateChange}
-          maximumDate={endDate}
+          maximumDate={pendingEventEndDate}
         />
       )}
 
       {showEndPicker && (
         <DateTimePicker
-          value={endDate}
+          value={pendingEventEndDate}
           mode="datetime"
           display={Platform.OS === 'ios' ? 'spinner' : 'default'}
           onChange={onEndDateChange}
-          minimumDate={startDate}
+          minimumDate={pendingEventStartDate}
           maximumDate={new Date()}
         />
       )}
+
+      {/* Apply/Cancel Buttons */}
+      {hasEventPendingChanges && (
+        <View style={styles.modalButtons}>
+          <TouchableOpacity
+            onPress={handleCancelEventFilters}
+            style={[styles.modalButton, styles.cancelButton, { backgroundColor: themeColors.background, borderColor: themeColors.border }]}
+          >
+            <Text style={[styles.cancelButtonText, { color: themeColors.text.secondary }]}>
+              {t('common.cancel')}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleApplyEventFilters}
+            style={[styles.modalButton, styles.applyButton, { backgroundColor: themeColors.primary }]}
+          >
+            <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+            <Text style={styles.applyButtonText}>
+              {t('common.apply')}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </Card>
-  );
+  ), [themeColors, t, startDate, endDate, pendingEventStartDate, pendingEventEndDate, showStartPicker, showEndPicker, hasEventPendingChanges, formatDateLabel, formatTimeLabel, onStartDateChange, onEndDateChange, handleApplyEventFilters, handleCancelEventFilters]);
 
   // Render safety events filter
-  const renderSafetyFilters = () => (
+  const renderSafetyFilters = useCallback(() => (
     <Card style={[styles.safetyCard, { backgroundColor: themeColors.surface }]}>
       <View style={styles.safetyHeader}>
         <Ionicons name="shield-checkmark" size={20} color={themeColors.danger} />
@@ -897,10 +1000,10 @@ export default function EventsScreen() {
         </TouchableOpacity>
       )}
     </Card>
-  );
+  ), [themeColors, t, selectedEventTypes, safetyEventTypes, toggleEventType]);
 
   // Render statistics card
-  const renderStatistics = () => (
+  const renderStatistics = useCallback(() => (
     <Card style={styles.statsCard}>
       <Text style={[styles.sectionTitle, { color: themeColors.text.primary }]}>
         {t('events.statistics.title')}
@@ -919,7 +1022,7 @@ export default function EventsScreen() {
             {stats.totalOutages}
           </Text>
           <Text style={[styles.statLabel, { color: themeColors.text.secondary }]}>
-            Outages
+            {t('events.statistics.outages')}
           </Text>
         </View>
         <View style={styles.statItem}>
@@ -927,15 +1030,15 @@ export default function EventsScreen() {
             {formatDurationShort(stats.averageOutageDuration)}
           </Text>
           <Text style={[styles.statLabel, { color: themeColors.text.secondary }]}>
-            Avg Duration
+            {t('events.statistics.avgDuration')}
           </Text>
         </View>
       </View>
     </Card>
-  );
+  ), [themeColors, t, stats]);
 
   // Render event item
-  const renderEventItem = ({ item }: { item: typeof events[0] }) => {
+  const renderEventItem = useCallback(({ item }: { item: typeof events[0] }) => {
     const eventColor = getEventColor(item.type);
     const icon = getEventIcon(item.type);
 
@@ -1003,10 +1106,10 @@ export default function EventsScreen() {
         )}
       </View>
     );
-  };
+  }, [themeColors]);
 
   // Filter events by selected types and date range
-  const filteredEvents = events.filter(event => {
+  const filteredEvents = useMemo(() => events.filter(event => {
     // Check date range
     const eventDate = new Date(event.timestamp);
     const isInDateRange = eventDate >= startDate && eventDate <= endDate;
@@ -1015,7 +1118,7 @@ export default function EventsScreen() {
     const matchesType = selectedEventTypes.length === 0 || selectedEventTypes.includes(event.type);
 
     return isInDateRange && matchesType;
-  });
+  }), [events, startDate, endDate, selectedEventTypes]);
 
   return (
     <SafeAreaView
@@ -1086,7 +1189,25 @@ export default function EventsScreen() {
         {activeTab === 'consumption' ? (
           <>
             {/* Energy Consumption Overview */}
-            {consumptionOverview}
+            <ConsumptionOverview
+              themeColors={themeColors}
+              t={t}
+              formatDateLabel={formatDateLabel}
+              formatEnergy={formatEnergy}
+              consumptionStartDate={consumptionStartDate}
+              consumptionEndDate={consumptionEndDate}
+              startHour={startHour}
+              endHour={endHour}
+              totalConsumption={totalConsumption}
+              currentData={currentData}
+              maxConsumption={maxConsumption}
+              avgConsumption={avgConsumption}
+              daysDifference={daysDifference}
+              isMultipleDays={isMultipleDays}
+              currentHour={currentHour}
+              onDateRangePress={handleDateRangePress}
+              onHourRangePress={handleHourRangePress}
+            />
 
             {/* Electrical Parameter Graphs (Voltage, Current, Power Curves) */}
             {parameterGraphs}
@@ -1115,7 +1236,7 @@ export default function EventsScreen() {
                 <View style={styles.emptyState}>
                   <Ionicons name="document-outline" size={48} color={themeColors.text.secondary} />
                   <Text style={[styles.emptyText, { color: themeColors.text.secondary }]}>
-                    No events found
+                    {t('events.eventsList.empty')}
                   </Text>
                 </View>
               )}
@@ -1135,7 +1256,7 @@ export default function EventsScreen() {
                   {t('events.consumption.dateRange')}
                 </Text>
               </View>
-              <TouchableOpacity onPress={() => setShowDateRangeModal(false)}>
+              <TouchableOpacity onPress={closeDateRangeModal}>
                 <Ionicons name="close" size={24} color={themeColors.text.secondary} />
               </TouchableOpacity>
             </View>
@@ -1181,7 +1302,7 @@ export default function EventsScreen() {
                 style={[styles.presetButton, { backgroundColor: themeColors.background, borderColor: themeColors.primary }]}
               >
                 <Text style={[styles.presetButtonText, { color: themeColors.text.primary }]}>
-                  Last Week
+                  {t('events.presets.lastWeek')}
                 </Text>
               </TouchableOpacity>
 
@@ -1196,7 +1317,7 @@ export default function EventsScreen() {
                 style={[styles.presetButton, { backgroundColor: themeColors.background, borderColor: themeColors.primary }]}
               >
                 <Text style={[styles.presetButtonText, { color: themeColors.text.primary }]}>
-                  Last Month
+                  {t('events.presets.lastMonth')}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -1244,7 +1365,7 @@ export default function EventsScreen() {
 
             {/* Apply Button */}
             <TouchableOpacity
-              onPress={() => setShowDateRangeModal(false)}
+              onPress={closeDateRangeModal}
               style={[styles.applyFilterButton, { backgroundColor: themeColors.primary }]}
             >
               <Text style={styles.applyFilterText}>{t('common.apply')}</Text>
@@ -1264,7 +1385,7 @@ export default function EventsScreen() {
                   {t('events.consumption.hourRange')}
                 </Text>
               </View>
-              <TouchableOpacity onPress={() => setShowHourRangeModal(false)}>
+              <TouchableOpacity onPress={closeHourRangeModal}>
                 <Ionicons name="close" size={24} color={themeColors.text.secondary} />
               </TouchableOpacity>
             </View>
@@ -1297,8 +1418,9 @@ export default function EventsScreen() {
             <View style={styles.hourPresetsContainer}>
               <TouchableOpacity
                 onPress={() => {
-                  setStartHour(0);
-                  setEndHour(23);
+                  setPendingStartHour(0);
+                  setPendingEndHour(23);
+                  setHasPendingChanges(true);
                 }}
                 style={[styles.hourPresetButton, { backgroundColor: themeColors.background, borderColor: themeColors.info }]}
               >
@@ -1309,8 +1431,9 @@ export default function EventsScreen() {
 
               <TouchableOpacity
                 onPress={() => {
-                  setStartHour(6);
-                  setEndHour(18);
+                  setPendingStartHour(6);
+                  setPendingEndHour(18);
+                  setHasPendingChanges(true);
                 }}
                 style={[styles.hourPresetButton, { backgroundColor: themeColors.background, borderColor: themeColors.info }]}
               >
@@ -1322,8 +1445,9 @@ export default function EventsScreen() {
 
               <TouchableOpacity
                 onPress={() => {
-                  setStartHour(18);
-                  setEndHour(23);
+                  setPendingStartHour(18);
+                  setPendingEndHour(23);
+                  setHasPendingChanges(true);
                 }}
                 style={[styles.hourPresetButton, { backgroundColor: themeColors.background, borderColor: themeColors.info }]}
               >
@@ -1336,8 +1460,9 @@ export default function EventsScreen() {
               <TouchableOpacity
                 onPress={() => {
                   const now = new Date().getHours();
-                  setStartHour(Math.max(0, now - 3));
-                  setEndHour(now);
+                  setPendingStartHour(Math.max(0, now - 3));
+                  setPendingEndHour(now);
+                  setHasPendingChanges(true);
                 }}
                 style={[styles.hourPresetButton, { backgroundColor: themeColors.background, borderColor: themeColors.info }]}
               >
@@ -1355,18 +1480,24 @@ export default function EventsScreen() {
               </Text>
               <View style={styles.hourPickerRowCentered}>
                 <TouchableOpacity
-                  onPress={() => setStartHour(Math.max(0, startHour - 1))}
+                  onPress={() => {
+                    setPendingStartHour(Math.max(0, pendingStartHour - 1));
+                    setHasPendingChanges(true);
+                  }}
                   style={[styles.hourButton, { backgroundColor: themeColors.background, borderColor: themeColors.info }]}
                 >
                   <Ionicons name="remove" size={22} color={themeColors.info} />
                 </TouchableOpacity>
                 <View style={[styles.hourDisplay, { backgroundColor: themeColors.background, borderColor: themeColors.info }]}>
                   <Text style={[styles.hourDisplayText, { color: themeColors.text.primary }]}>
-                    {startHour.toString().padStart(2, '0')}:00
+                    {pendingStartHour.toString().padStart(2, '0')}:00
                   </Text>
                 </View>
                 <TouchableOpacity
-                  onPress={() => setStartHour(Math.min(endHour, startHour + 1))}
+                  onPress={() => {
+                    setPendingStartHour(Math.min(pendingEndHour, pendingStartHour + 1));
+                    setHasPendingChanges(true);
+                  }}
                   style={[styles.hourButton, { backgroundColor: themeColors.background, borderColor: themeColors.info }]}
                 >
                   <Ionicons name="add" size={22} color={themeColors.info} />
@@ -1381,28 +1512,59 @@ export default function EventsScreen() {
               </Text>
               <View style={styles.hourPickerRowCentered}>
                 <TouchableOpacity
-                  onPress={() => setEndHour(Math.max(startHour, endHour - 1))}
+                  onPress={() => {
+                    setPendingEndHour(Math.max(pendingStartHour, pendingEndHour - 1));
+                    setHasPendingChanges(true);
+                  }}
                   style={[styles.hourButton, { backgroundColor: themeColors.background, borderColor: themeColors.info }]}
                 >
                   <Ionicons name="remove" size={22} color={themeColors.info} />
                 </TouchableOpacity>
                 <View style={[styles.hourDisplay, { backgroundColor: themeColors.background, borderColor: themeColors.info }]}>
                   <Text style={[styles.hourDisplayText, { color: themeColors.text.primary }]}>
-                    {endHour.toString().padStart(2, '0')}:00
+                    {pendingEndHour.toString().padStart(2, '0')}:00
                   </Text>
                 </View>
                 <TouchableOpacity
-                  onPress={() => setEndHour(Math.min(23, endHour + 1))}
+                  onPress={() => {
+                    setPendingEndHour(Math.min(23, pendingEndHour + 1));
+                    setHasPendingChanges(true);
+                  }}
                   style={[styles.hourButton, { backgroundColor: themeColors.background, borderColor: themeColors.info }]}
                 >
                   <Ionicons name="add" size={22} color={themeColors.info} />
                 </TouchableOpacity>
               </View>
+            <Text style={[styles.chartSubtitle, { textAlign: 'center', color: themeColors.text.secondary }]}>
+              {Math.max(0, pendingEndHour - pendingStartHour + 1)} {t('events.consumption.hours')}
+            </Text>
+
+            {/* Apply/Cancel Buttons */}
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                onPress={handleCancelFilters}
+                style={[styles.modalButton, styles.cancelButton, { backgroundColor: themeColors.background, borderColor: themeColors.border }]}
+              >
+                <Text style={[styles.cancelButtonText, { color: themeColors.text.secondary }]}>
+                  {t('common.cancel')}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleApplyFilters}
+                style={[styles.modalButton, styles.applyButton, { backgroundColor: themeColors.primary }]}
+              >
+                <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+                <Text style={styles.applyButtonText}>
+                  {t('common.apply')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
             </View>
 
             {/* Apply Button */}
             <TouchableOpacity
-              onPress={() => setShowHourRangeModal(false)}
+              onPress={closeHourRangeModal}
               style={[styles.applyFilterButton, { backgroundColor: themeColors.info }]}
             >
               <Text style={styles.applyFilterText}>{t('common.apply')}</Text>
@@ -1414,21 +1576,21 @@ export default function EventsScreen() {
       {/* Date Pickers */}
       {showConsumptionStartPicker && (
         <DateTimePicker
-          value={consumptionStartDate}
+          value={pendingStartDate}
           mode="date"
           display={Platform.OS === 'ios' ? 'spinner' : 'default'}
           onChange={onConsumptionStartDateChange}
-          maximumDate={consumptionEndDate}
+          maximumDate={pendingEndDate}
         />
       )}
 
       {showConsumptionEndPicker && (
         <DateTimePicker
-          value={consumptionEndDate}
+          value={pendingEndDate}
           mode="date"
           display={Platform.OS === 'ios' ? 'spinner' : 'default'}
           onChange={onConsumptionEndDateChange}
-          minimumDate={consumptionStartDate}
+          minimumDate={pendingStartDate}
           maximumDate={new Date()}
         />
       )}
@@ -2122,5 +2284,43 @@ const styles = StyleSheet.create({
     ...typography.button,
     color: '#FFFFFF',
     fontWeight: '600',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    marginTop: spacing.lg,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  modalButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.large,
+    gap: spacing.xs,
+  },
+  cancelButton: {
+    borderWidth: 1.5,
+  },
+  applyButton: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  applyButtonText: {
+    ...typography.button,
+    color: '#FFFFFF',
+    fontWeight: '600',
+    fontSize: 15,
+  },
+  cancelButtonText: {
+    ...typography.button,
+    fontWeight: '600',
+    fontSize: 15,
   },
 });

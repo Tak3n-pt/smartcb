@@ -9,6 +9,7 @@ export interface VoltageThreshold {
 }
 
 export interface CurrentThreshold {
+  min: number;
   max: number;
   enabled: boolean;
   delay: number; // seconds
@@ -52,6 +53,15 @@ export interface NotificationSettings {
   frequencyAlerts?: boolean;
   powerFactorAlerts?: boolean;
   deviceOffline: boolean;
+  // Safety alerts derived from Events safety filter
+  overvoltage?: boolean;
+  undervoltage?: boolean;
+  overcurrent?: boolean;
+  overload?: boolean;
+  underload?: boolean;
+  frequencyMin?: boolean;
+  frequencyMax?: boolean;
+  powerFactorLow?: boolean;
   sound: boolean;
   vibration: boolean;
 }
