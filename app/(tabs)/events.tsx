@@ -1,6 +1,6 @@
 // Events/Log Screen with Advanced Filtering - PERFORMANCE OPTIMIZED
 
-import React, { useState, useMemo, useCallback, memo } from 'react';
+import React, { useState, useMemo, useCallback, memo, useEffect } from 'react';
 import {
   ScrollView,
   View,
@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useEventsStore, useThemeStore, useElectricalStore, useLanguageStore } from '../../store';
+import { useHistoryStore, SAMPLE_INTERVAL, ENERGY_LOW_RATIO_THRESHOLD, ONE_HOUR_MS } from '../../store/useHistoryStore';
 import { Card } from '../../components/ui';
 import { colors, typography, spacing, borderRadius, shadows } from '../../theme';
 import {
@@ -29,6 +30,7 @@ import {
   formatPowerFactor,
   getEventIcon,
   getEventColor,
+  translateEventDescription,
 } from '../../utils';
 import { EventType } from '../../types';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -37,6 +39,8 @@ import { SkiaLineChart } from '../../components/charts/SkiaLineChart';
 import { SkiaBarChart } from '../../components/charts/SkiaBarChart';
 
 const { width: screenWidth } = Dimensions.get('window');
+const EMPTY_HISTORY: any[] = Object.freeze([]);
+const EMPTY_RECENT: any[] = Object.freeze([]);
 
 type TimeRange = 'hour' | 'day' | 'week' | 'month' | 'custom';
 type ConsumptionView = 'hourly' | 'daily' | 'weekly' | 'monthly' | 'custom';
@@ -63,120 +67,223 @@ const ConsumptionOverview = memo(({
   currentHour,
   onDateRangePress,
   onHourRangePress,
-}: any) => (
-  <Card style={[styles.consumptionCard, { backgroundColor: themeColors.surface }]}>
-    <View style={styles.consumptionHeader}>
-      <View style={styles.consumptionTitleRow}>
-        <MaterialCommunityIcons name="lightning-bolt" size={24} color={themeColors.primary} />
-        <Text style={[styles.sectionTitle, { color: themeColors.text.primary, marginBottom: 0, marginLeft: spacing.sm }]}>
-          {t('events.consumption.title')}
-        </Text>
+}: any) => {
+  // MEMOIZE chart data to prevent infinite re-renders
+  const chartData = useMemo(() =>
+    currentData.map((item: any) => ({
+      label: item.label,
+      value: item.kWh,
+      highlight: item.hourValue === currentHour,
+    })),
+    [currentData, currentHour]
+  );
+
+  return (
+    <Card style={[styles.consumptionCard, { backgroundColor: themeColors.surface }]}>
+      <View style={styles.consumptionHeader}>
+        <View style={styles.consumptionTitleRow}>
+          <MaterialCommunityIcons name="lightning-bolt" size={24} color={themeColors.primary} />
+          <Text style={[styles.sectionTitle, { color: themeColors.text.primary, marginBottom: 0, marginLeft: spacing.sm }]}>
+            {t('events.consumption.title')}
+          </Text>
+        </View>
       </View>
-    </View>
 
-    {/* Separate Filter Buttons */}
-    <View style={styles.filterButtonsRow}>
-      {/* Date Range Button */}
-      <TouchableOpacity
-        onPress={onDateRangePress}
-        style={[styles.filterButton, { backgroundColor: themeColors.surface, borderColor: themeColors.primary, borderWidth: 1.5 }]}
-      >
-        <Ionicons name="calendar-outline" size={16} color={themeColors.primary} />
-        <View style={styles.filterButtonContent}>
-          <Text style={[styles.filterButtonLabel, { color: themeColors.text.secondary }]}>
-            {t('events.consumption.dateRange')}
+      {/* Date Range Presets */}
+      <Text style={[styles.presetLabel, { color: themeColors.text.secondary }]}>
+        {t('events.consumption.dateRange')}:
+      </Text>
+      <View style={styles.presetsRow}>
+        <TouchableOpacity
+          style={[styles.presetChip, { backgroundColor: themeColors.primaryLight }]}
+          onPress={() => {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const todayEnd = new Date();
+            todayEnd.setHours(23, 59, 59, 999);
+            setConsumptionStartDate(today);
+            setConsumptionEndDate(todayEnd);
+          }}
+        >
+          <Text style={[styles.presetChipText, { color: themeColors.primary }]}>
+            {t('events.consumption.datePresets.today')}
           </Text>
-          <Text style={[styles.filterButtonValue, { color: themeColors.text.primary }]}>
-            {formatDateLabel(consumptionStartDate)} - {formatDateLabel(consumptionEndDate)}
-          </Text>
-        </View>
-      </TouchableOpacity>
+        </TouchableOpacity>
 
-      {/* Hour Range Button */}
-      <TouchableOpacity
-        onPress={onHourRangePress}
-        style={[styles.filterButton, { backgroundColor: themeColors.surface, borderColor: themeColors.info, borderWidth: 1.5 }]}
-      >
-        <Ionicons name="time-outline" size={16} color={themeColors.info} />
-        <View style={styles.filterButtonContent}>
-          <Text style={[styles.filterButtonLabel, { color: themeColors.text.secondary }]}>
-            {t('events.consumption.hourRange')}
+        <TouchableOpacity
+          style={[styles.presetChip, { backgroundColor: themeColors.primaryLight }]}
+          onPress={() => {
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            yesterday.setHours(0, 0, 0, 0);
+            const yesterdayEnd = new Date(yesterday);
+            yesterdayEnd.setHours(23, 59, 59, 999);
+            setConsumptionStartDate(yesterday);
+            setConsumptionEndDate(yesterdayEnd);
+          }}
+        >
+          <Text style={[styles.presetChipText, { color: themeColors.primary }]}>
+            {t('events.consumption.datePresets.yesterday')}
           </Text>
-          <Text style={[styles.filterButtonValue, { color: themeColors.text.primary }]}>
-            {`${startHour.toString().padStart(2, '0')}:00`} - {`${endHour.toString().padStart(2, '0')}:00`}
-          </Text>
-        </View>
-      </TouchableOpacity>
-    </View>
+        </TouchableOpacity>
 
-    {/* Current Total Energy */}
-    <View style={[styles.currentEnergyCard, { backgroundColor: themeColors.primaryLight }]}>
-      <View style={styles.currentEnergyContent}>
-        <View style={styles.currentEnergyLeft}>
-          <Text style={[styles.currentEnergyLabel, { color: themeColors.text.secondary }]}>
-            {t('events.consumption.total')}
+        <TouchableOpacity
+          style={[styles.presetChip, { backgroundColor: themeColors.primaryLight }]}
+          onPress={() => {
+            const start = new Date();
+            start.setDate(start.getDate() - 2);
+            start.setHours(0, 0, 0, 0);
+            const end = new Date();
+            end.setHours(23, 59, 59, 999);
+            setConsumptionStartDate(start);
+            setConsumptionEndDate(end);
+          }}
+        >
+          <Text style={[styles.presetChipText, { color: themeColors.primary }]}>
+            {t('events.consumption.datePresets.last3Days')}
           </Text>
-          <Text style={[styles.currentEnergyValue, { color: themeColors.primary }]}>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.presetChip, { backgroundColor: themeColors.primaryLight }]}
+          onPress={() => {
+            const start = new Date();
+            start.setDate(start.getDate() - 6);
+            start.setHours(0, 0, 0, 0);
+            const end = new Date();
+            end.setHours(23, 59, 59, 999);
+            setConsumptionStartDate(start);
+            setConsumptionEndDate(end);
+          }}
+        >
+          <Text style={[styles.presetChipText, { color: themeColors.primary }]}>
+            {t('events.consumption.datePresets.last7Days')}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.presetChip, { backgroundColor: themeColors.background, borderWidth: 1, borderColor: themeColors.primary }]}
+          onPress={onDateRangePress}
+        >
+          <Ionicons name="calendar-outline" size={14} color={themeColors.primary} />
+          <Text style={[styles.presetChipText, { color: themeColors.primary, marginLeft: 4 }]}>
+            Custom
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Hour Range Presets */}
+      <Text style={[styles.presetLabel, { color: themeColors.text.secondary }]}>
+        {t('events.consumption.hourRange')}:
+      </Text>
+      <View style={styles.presetsRow}>
+        <TouchableOpacity
+          style={[styles.presetChip, { backgroundColor: themeColors.infoLight }]}
+          onPress={() => {
+            setStartHour(0);
+            setEndHour(23);
+          }}
+        >
+          <Text style={[styles.presetChipText, { color: themeColors.info }]}>
+            {t('events.consumption.hourPresets.fullDay')}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.presetChip, { backgroundColor: themeColors.infoLight }]}
+          onPress={() => {
+            const currentHour = new Date().getHours();
+            const startHour = Math.max(0, currentHour - 3);
+            setStartHour(startHour);
+            setEndHour(currentHour);
+          }}
+        >
+          <Text style={[styles.presetChipText, { color: themeColors.info }]}>
+            {t('events.consumption.hourPresets.last3Hours')}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.presetChip, { backgroundColor: themeColors.infoLight }]}
+          onPress={() => {
+            setStartHour(6);
+            setEndHour(18);
+          }}
+        >
+          <Text style={[styles.presetChipText, { color: themeColors.info }]}>
+            {t('events.consumption.hourPresets.daytime')}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.presetChip, { backgroundColor: themeColors.infoLight }]}
+          onPress={() => {
+            setStartHour(18);
+            setEndHour(23);
+          }}
+        >
+          <Text style={[styles.presetChipText, { color: themeColors.info }]}>
+            {t('events.consumption.hourPresets.evening')}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.presetChip, { backgroundColor: themeColors.background, borderWidth: 1, borderColor: themeColors.info }]}
+          onPress={onHourRangePress}
+        >
+          <Ionicons name="time-outline" size={14} color={themeColors.info} />
+          <Text style={[styles.presetChipText, { color: themeColors.info, marginLeft: 4 }]}>
+            Custom
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Compact Energy Display */}
+      <View style={styles.energyStatsGrid}>
+        {/* Total Energy Card */}
+        <View style={[styles.energyStatCard, { backgroundColor: themeColors.primary }]}>
+          <MaterialCommunityIcons name="flash" size={28} color="#FFFFFF" />
+          <Text style={styles.energyStatValue}>
             {formatEnergy(totalConsumption)}
           </Text>
-          <Text style={[styles.currentEnergyDateRange, { color: themeColors.text.secondary }]}>
-            {formatDateLabel(consumptionStartDate)} - {formatDateLabel(consumptionEndDate)}
+          <Text style={styles.energyStatLabel}>
+            {t('events.consumption.total')}
           </Text>
         </View>
-        <View style={[styles.energyIconContainer, { backgroundColor: themeColors.primary }]}>
-          <MaterialCommunityIcons name="flash" size={32} color="#FFFFFF" />
-        </View>
-      </View>
-    </View>
 
-    {/* High-Performance Skia Bar Chart */}
-    <View style={styles.chartContainer}>
-      <Text style={[styles.chartTitle, { color: themeColors.text.primary }]}>
-        {t('events.consumption.hourlyBreakdown')}
-      </Text>
-      <Text style={[styles.chartSubtitle, { color: themeColors.text.secondary }]}>
-        {currentData.length} {t('events.consumption.hours')}
-        {isMultipleDays && ` • ${daysDifference} ${t('common.days')}`}
-      </Text>
-      <SkiaBarChart
-        data={currentData.map((item: any) => ({
-          label: item.label,
-          value: item.kWh,
-          highlight: item.hourValue === currentHour,
-        }))}
-        maxValue={maxConsumption}
-        theme={themeColors === colors.dark ? 'dark' : 'light'}
-        primaryColor={themeColors.primary}
-        highlightColor={themeColors.primary}
-        formatValue={(v) => formatEnergy(v)}
-      />
-    </View>
-
-    {/* Consumption Stats */}
-    <View style={styles.consumptionStatsRow}>
-      <View style={styles.consumptionStatItem}>
-        <View style={[styles.consumptionStatIcon, { backgroundColor: themeColors.success + '20' }]}>
-          <Ionicons name="trending-down" size={16} color={themeColors.success} />
-        </View>
-        <View>
-          <Text style={[styles.consumptionStatValue, { color: themeColors.text.primary }]}>
+        {/* Average Card */}
+        <View style={[styles.energyStatCard, { backgroundColor: themeColors.success }]}>
+          <MaterialCommunityIcons name="trending-down" size={28} color="#FFFFFF" />
+          <Text style={styles.energyStatValue}>
             {formatEnergy(avgConsumption)}
           </Text>
-          <Text style={[styles.consumptionStatLabel, { color: themeColors.text.secondary }]}>
+          <Text style={styles.energyStatLabel}>
             {t('events.consumption.average')}
           </Text>
         </View>
       </View>
-    </View>
-  </Card>
-));
+
+      {/* Chart */}
+      <View style={styles.chartContainer}>
+        <SkiaBarChart
+          data={chartData}
+          maxValue={maxConsumption}
+          theme={themeColors === colors.dark ? 'dark' : 'light'}
+          primaryColor={themeColors.primary}
+          highlightColor={themeColors.primary}
+          formatValue={(v) => formatEnergy(v)}
+        />
+      </View>
+    </Card>
+  );
+});
 
 export default function EventsScreen() {
-  const { filter, setFilter, getFilteredEvents, getStatistics } = useEventsStore();
   const { theme } = useThemeStore();
   const { language } = useLanguageStore();
   const { data } = useElectricalStore();
-  const themeColors = colors[theme];
+  // CRITICAL FIX: Memoize themeColors to prevent new object on every render
+  const themeColors = useMemo(() => colors[theme], [theme]);
   const { t } = useTranslation();
 
   // Check if we're in RTL mode (Arabic)
@@ -185,28 +292,55 @@ export default function EventsScreen() {
   // Tab state
   const [activeTab, setActiveTab] = useState<TabType>('consumption');
 
+  // CRITICAL FIX: Only load data when component is mounted to prevent initial render issues
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    // Delay heavy computations until after first render
+    const timer = setTimeout(() => setIsReady(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
+
   const [timeRange, setTimeRange] = useState<TimeRange>('week');
   const [showAdvancedFilter, setShowAdvancedFilter] = useState(false);
   const [selectedEventTypes, setSelectedEventTypes] = useState<EventType[]>([]);
+
+  // Pagination state for events list
+  const [eventsToShow, setEventsToShow] = useState(10); // Initial display: 10 events
+  const EVENTS_PER_PAGE = 10;
 
   // Separate modal states for date and hour range
   const [showDateRangeModal, setShowDateRangeModal] = useState(false);
   const [showHourRangeModal, setShowHourRangeModal] = useState(false);
 
-  // PERFORMANCE: Use callback refs to prevent recreation
-  const today = useMemo(() => new Date(), []);
-
-  // Consumption filter states - DEFAULT TO TODAY FOR BEST PERFORMANCE
-  const [consumptionStartDate, setConsumptionStartDate] = useState(today);
-  const [consumptionEndDate, setConsumptionEndDate] = useState(today);
+  // CRITICAL FIX: Use stable date initialization to prevent re-renders
+  // Start with same day BUT endDate must be at end of day
+  const [consumptionStartDate, setConsumptionStartDate] = useState(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
+  const [consumptionEndDate, setConsumptionEndDate] = useState(() => {
+    const d = new Date();
+    d.setHours(23, 59, 59, 999);  // FIX: End of today, not start of today
+    return d;
+  });
   const [startHour, setStartHour] = useState(0);
   const [endHour, setEndHour] = useState(23);
   const [showConsumptionStartPicker, setShowConsumptionStartPicker] = useState(false);
   const [showConsumptionEndPicker, setShowConsumptionEndPicker] = useState(false);
 
   // Pending filter states (for Apply button)
-  const [pendingStartDate, setPendingStartDate] = useState(today);
-  const [pendingEndDate, setPendingEndDate] = useState(today);
+  const [pendingStartDate, setPendingStartDate] = useState(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
+  const [pendingEndDate, setPendingEndDate] = useState(() => {
+    const d = new Date();
+    d.setHours(23, 59, 59, 999);  // FIX: End of today, not start of today
+    return d;
+  });
   const [pendingStartHour, setPendingStartHour] = useState(0);
   const [pendingEndHour, setPendingEndHour] = useState(23);
   const [hasPendingChanges, setHasPendingChanges] = useState(false);
@@ -223,137 +357,570 @@ export default function EventsScreen() {
   const [hasEventPendingChanges, setHasEventPendingChanges] = useState(false);
   const [showEventFilterModal, setShowEventFilterModal] = useState(false);
 
-  const events = getFilteredEvents();
-  const stats = getStatistics();
+  // CRITICAL FIX: Get store functions and data separately to prevent infinite loops
+  const filter = useEventsStore((state) => state.filter);
+  const setFilter = useEventsStore((state) => state.setFilter);
+  const eventsData = useEventsStore((state) => state.events);
 
-  // Get current hour for highlighting
-  const currentHour = new Date().getHours();
+  // CRITICAL FIX: Calculate filtered events and statistics directly from raw data
+  const events = useMemo(() => {
+    const now = Date.now();
+    let filtered = eventsData;
 
-  // PERFORMANCE: Generate time series data helper - memoized
-  const generateTimeSeriesData = useCallback((points: number, baseValue: number, variance: number, includeSpike: boolean = false) => {
-    const data = [];
-    for (let i = 0; i < points; i++) {
-      let value = baseValue + (Math.random() - 0.5) * variance;
+    // Filter by date range
+    switch (filter.dateRange) {
+      case 'today':
+        const todayStart = new Date().setHours(0, 0, 0, 0);
+        filtered = filtered.filter((event) => event.timestamp >= todayStart);
+        break;
+      case 'week':
+        const weekStart = now - 7 * 24 * 60 * 60 * 1000;
+        filtered = filtered.filter((event) => event.timestamp >= weekStart);
+        break;
+      case 'month':
+        const monthStart = now - 30 * 24 * 60 * 60 * 1000;
+        filtered = filtered.filter((event) => event.timestamp >= monthStart);
+        break;
+    }
 
-      // Add realistic spike at a random point
-      if (includeSpike && i === Math.floor(points * 0.6)) {
-        value = baseValue + variance * 2.5;
+    // Filter by event type
+    if (filter.eventType !== 'all') {
+      filtered = filtered.filter((event) => event.type === filter.eventType);
+    }
+
+    return filtered;
+  }, [eventsData, filter]);
+
+  const stats = useMemo(() => {
+    // Calculate statistics for the current month
+    const monthStart = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const monthEvents = eventsData.filter((event) => event.timestamp >= monthStart);
+
+    const outages = monthEvents.filter((event) => event.type === 'outage');
+    const totalOutages = outages.length;
+
+    const totalDowntime = outages.reduce((sum, event) => sum + (event.duration || 0), 0);
+
+    const averageOutageDuration =
+      totalOutages > 0 ? totalDowntime / totalOutages : 0;
+
+    return {
+      totalEvents: monthEvents.length,
+      totalOutages,
+      averageOutageDuration,
+      totalDowntime,
+    };
+  }, [eventsData]);
+
+  // CRITICAL FIX: Only subscribe to store data after component is ready
+  const historicalData = useHistoryStore((state) => isReady ? state.historicalData : EMPTY_HISTORY);
+  const recentReadings = useHistoryStore((state) => isReady ? state.recentReadings : EMPTY_RECENT);
+
+  const currentHour = useMemo(() => new Date().getHours(), []);
+
+  const hourlyConsumption = useMemo(() => {
+    // CRITICAL FIX: Don't calculate if not ready or no data
+    if (!isReady || !historicalData || !recentReadings) {
+      return [];
+    }
+
+    // DEBUG: Log input data
+    if (__DEV__) {
+      console.log('📊 CONSUMPTION DATA CALCULATION:', {
+        historicalDataCount: historicalData?.length ?? 0,
+        recentReadingsCount: recentReadings?.length ?? 0,
+        hasESP32Data: data !== null,
+        currentESP32Data: data ? {
+          voltage: data.voltage,
+          current: data.current,
+          power: data.power,
+          energy: data.energy,
+          frequency: data.frequency,
+          powerFactor: data.powerFactor
+        } : null,
+        dateRange: {
+          start: consumptionStartDate.toISOString(),
+          end: consumptionEndDate.toISOString()
+        },
+        hourRange: { start: startHour, end: endHour }
+      });
+    }
+
+    const startDate = new Date(consumptionStartDate);
+    startDate.setHours(0, 0, 0, 0);
+
+    const endDate = new Date(consumptionEndDate);
+    endDate.setHours(23, 59, 59, 999);
+
+    const startTime = startDate.getTime();
+    const endTime = endDate.getTime();
+
+    const safeNumber = (value: any, fallback = 0) =>
+      typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+
+    const computeDerivedEnergy = (avgPower: number, durationMs: number) => {
+      if (!Number.isFinite(avgPower) || avgPower <= 0 || !Number.isFinite(durationMs) || durationMs <= 0) {
+        return 0;
+      }
+      return (avgPower / 1000) * (durationMs / ONE_HOUR_MS);
+    };
+
+    const normalizeEnergyDelta = (measured: number, derived: number, expectedOverride?: number) => {
+      const measuredSafe = Number.isFinite(measured) ? measured : 0;
+      const derivedSafe = Number.isFinite(derived) ? derived : 0;
+      const expected = Number.isFinite(expectedOverride ?? derivedSafe) ? (expectedOverride ?? derivedSafe) : derivedSafe;
+
+      if (derivedSafe > 0 && (measuredSafe <= 0 || measuredSafe < derivedSafe * ENERGY_LOW_RATIO_THRESHOLD)) {
+        return derivedSafe;
       }
 
-      // Add smooth variations
-      value += Math.sin(i / points * Math.PI * 2) * variance * 0.3;
-      data.push(parseFloat(value.toFixed(2)));
-    }
-    return data;
-  }, []);
+      if (measuredSafe < 0) {
+        return 0;
+      }
 
-  // PERFORMANCE OPTIMIZED: Better memoization with specific dependencies
-  const hourlyConsumption = useMemo(() => {
-    const data = [];
-    const currentDate = new Date(consumptionStartDate);
-    currentDate.setHours(0, 0, 0, 0); // Reset time to start of day
+      if (measuredSafe === 0 && derivedSafe > 0) {
+        return derivedSafe;
+      }
 
-    const endDateObj = new Date(consumptionEndDate);
-    endDateObj.setHours(23, 59, 59, 999); // Set to end of day
+      return measuredSafe;
+    };
 
-    // Limit to prevent performance issues (max 7 days * 24 hours = 168 data points)
-    const maxDays = 7;
-    let dayCount = 0;
+    const getBucketDurationMs = (bucket: any) => {
+      const first = typeof bucket.firstTimestamp === 'number' ? bucket.firstTimestamp : bucket.timestamp;
+      const last = typeof bucket.lastTimestamp === 'number' ? bucket.lastTimestamp : first + SAMPLE_INTERVAL;
+      const duration = last - first;
 
-    // Loop through each day in the range
-    while (currentDate <= endDateObj && dayCount < maxDays) {
-      // For each day, generate hours within the selected hour range
-      for (let hour = startHour; hour <= endHour; hour++) {
-        const dateStr = currentDate.toISOString().split('T')[0]; // YYYY-MM-DD
-        data.push({
-          date: dateStr,
+      if (!Number.isFinite(duration) || duration <= 0) {
+        return SAMPLE_INTERVAL;
+      }
+
+      return Math.min(ONE_HOUR_MS, Math.max(SAMPLE_INTERVAL, duration));
+    };
+
+    const aggregateMap = new Map<number, any>();
+
+    historicalData.forEach((aggregate: any) => {
+      if (!aggregate?.timestamp) {
+        return;
+      }
+      const ts = aggregate.timestamp as number;
+      if (ts < startTime || ts > endTime) {
+        return;
+      }
+
+      const powerAvg = safeNumber(aggregate.powerAvg);
+      const sensorEnergy = safeNumber(aggregate.energyDelta);
+      const expectedEnergy = computeDerivedEnergy(powerAvg, ONE_HOUR_MS);
+      const energyDelta = normalizeEnergyDelta(sensorEnergy, expectedEnergy, expectedEnergy);
+
+      aggregateMap.set(ts, {
+        timestamp: ts,
+        voltageAvg: safeNumber(aggregate.voltageAvg),
+        voltageMin: safeNumber(aggregate.voltageMin),
+        voltageMax: safeNumber(aggregate.voltageMax),
+        currentAvg: safeNumber(aggregate.currentAvg),
+        currentMax: safeNumber(aggregate.currentMax),
+        powerAvg,
+        powerMax: safeNumber(aggregate.powerMax),
+        energyDelta,
+        energySource: sensorEnergy > 0 && Math.abs(energyDelta - sensorEnergy) > 1e-6 ? 'derived' : 'sensor',
+        frequencyAvg: safeNumber(aggregate.frequencyAvg),
+        powerFactorAvg: safeNumber(aggregate.powerFactorAvg, 1),
+        apparentPowerAvg: safeNumber(aggregate.apparentPowerAvg),
+        reactivePowerAvg: safeNumber(aggregate.reactivePowerAvg),
+        sampleCount: safeNumber(aggregate.sampleCount, 0),
+      });
+    });
+
+    const minuteBuckets = new Map<number, {
+      timestamp: number;
+      voltageSum: number;
+      voltageMin: number;
+      voltageMax: number;
+      currentSum: number;
+      currentMax: number;
+      powerSum: number;
+      powerMax: number;
+      frequencySum: number;
+      powerFactorSum: number;
+      apparentPowerSum: number;
+      reactivePowerSum: number;
+      energyStart: number | null;
+      energyEnd: number | null;
+      firstTimestamp: number | null;
+      lastTimestamp: number | null;
+      count: number;
+    }>();
+
+    recentReadings.forEach((reading: any) => {
+      if (!reading?.timestamp) {
+        return;
+      }
+      const ts = reading.timestamp as number;
+      if (ts < startTime || ts > endTime) {
+        return;
+      }
+
+
+      const hourStart = new Date(ts);
+      hourStart.setMinutes(0, 0, 0);
+      const bucketKey = hourStart.getTime();
+
+      let bucket = minuteBuckets.get(bucketKey);
+      if (!bucket) {
+        bucket = {
+          timestamp: bucketKey,
+          voltageSum: 0,
+          voltageMin: Number.POSITIVE_INFINITY,
+          voltageMax: Number.NEGATIVE_INFINITY,
+          currentSum: 0,
+          currentMax: Number.NEGATIVE_INFINITY,
+          powerSum: 0,
+          powerMax: Number.NEGATIVE_INFINITY,
+          frequencySum: 0,
+          powerFactorSum: 0,
+          apparentPowerSum: 0,
+          reactivePowerSum: 0,
+          energyStart: null,
+          energyEnd: null,
+          firstTimestamp: null,
+          lastTimestamp: null,
+          count: 0,
+        };
+        minuteBuckets.set(bucketKey, bucket);
+      }
+
+      if (bucket.firstTimestamp === null || ts < bucket.firstTimestamp) {
+        bucket.firstTimestamp = ts;
+      }
+      if (bucket.lastTimestamp === null || ts > bucket.lastTimestamp) {
+        bucket.lastTimestamp = ts;
+      }
+
+      const voltage = safeNumber(reading.voltage);
+      bucket.voltageSum += voltage;
+      bucket.voltageMin = Math.min(bucket.voltageMin, voltage);
+      bucket.voltageMax = Math.max(bucket.voltageMax, voltage);
+
+      const current = safeNumber(reading.current);
+      bucket.currentSum += current;
+      bucket.currentMax = Math.max(bucket.currentMax, current);
+
+      const power = safeNumber(reading.power);
+      bucket.powerSum += power;
+      bucket.powerMax = Math.max(bucket.powerMax, power);
+
+      bucket.frequencySum += safeNumber(reading.frequency);
+      bucket.powerFactorSum += safeNumber(reading.powerFactor, 1);
+      bucket.apparentPowerSum += safeNumber(reading.apparentPower);
+      bucket.reactivePowerSum += safeNumber(reading.reactivePower);
+
+      if (typeof reading.energy === 'number') {
+        if (bucket.energyStart === null) {
+          bucket.energyStart = reading.energy;
+        }
+        bucket.energyEnd = reading.energy;
+      }
+
+      bucket.count += 1;
+    });
+
+    const now = new Date();
+    now.setMinutes(0, 0, 0);
+    const currentHourStart = now.getTime();
+
+    minuteBuckets.forEach((bucket) => {
+      const count = bucket.count || 1;
+      const avgPower = count > 0 ? bucket.powerSum / count : 0;
+      const sensorEnergy =
+        bucket.energyStart !== null && bucket.energyEnd !== null
+          ? Math.max(0, bucket.energyEnd - bucket.energyStart)
+          : 0;
+      const durationMs = getBucketDurationMs(bucket);
+      const derivedEnergy = computeDerivedEnergy(avgPower, durationMs);
+      const energyDelta = normalizeEnergyDelta(sensorEnergy, derivedEnergy);
+
+      const aggregateFromMinutes = {
+        timestamp: bucket.timestamp,
+        voltageAvg: bucket.voltageSum / count,
+        voltageMin: safeNumber(bucket.voltageMin),
+        voltageMax: safeNumber(bucket.voltageMax),
+        currentAvg: bucket.currentSum / count,
+        currentMax: safeNumber(bucket.currentMax),
+        powerAvg: avgPower,
+        powerMax: safeNumber(bucket.powerMax),
+        energyDelta,
+        energySource: sensorEnergy > 0 && Math.abs(energyDelta - sensorEnergy) > 1e-6 ? 'derived' : 'sensor',
+        frequencyAvg: bucket.frequencySum / count,
+        powerFactorAvg: bucket.powerFactorSum / count,
+        apparentPowerAvg: bucket.apparentPowerSum / count,
+        reactivePowerAvg: bucket.reactivePowerSum / count,
+        sampleCount: bucket.count,
+      };
+
+      const existing = aggregateMap.get(bucket.timestamp);
+      const isCurrentHour = bucket.timestamp === currentHourStart;
+
+      if (!existing || isCurrentHour || (existing.sampleCount ?? 0) === 0) {
+        aggregateMap.set(bucket.timestamp, aggregateFromMinutes);
+      }
+    });
+
+    const isWithinHourRange = (hour: number) => {
+      // Default case: 0 to 23 should show all hours
+      if (startHour === 0 && endHour === 23) {
+        return true; // Show all 24 hours
+      }
+      // If same hour selected (e.g., 5 to 5), show only that hour
+      if (startHour === endHour) {
+        return hour === startHour;
+      }
+      // Normal range within a day (e.g., 5 to 10)
+      if (startHour < endHour) {
+        return hour >= startHour && hour <= endHour;
+      }
+      // Wraps around midnight (e.g., 22 to 3)
+      return hour >= startHour || hour <= endHour;
+    };
+
+    let combined = Array.from(aggregateMap.values())
+      .filter((aggregate) => {
+        if (!aggregate?.timestamp) {
+          return false;
+        }
+        const hour = new Date(aggregate.timestamp).getHours();
+        return isWithinHourRange(hour);
+      })
+      .map((aggregate) => {
+        const date = new Date(aggregate.timestamp);
+        const hour = date.getHours();
+        const energyKWh = Math.max(0, safeNumber(aggregate.energyDelta));
+        return {
+          date: date.toISOString().split('T')[0],
           hour: `${hour.toString().padStart(2, '0')}:00`,
           hourValue: hour,
-          kWh: Math.random() * 0.8 + 0.2,
-          timestamp: new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate(), hour).getTime(),
-        });
+          kWh: energyKWh,
+          timestamp: aggregate.timestamp,
+          voltageAvg: safeNumber(aggregate.voltageAvg),
+          currentAvg: safeNumber(aggregate.currentAvg),
+          powerAvg: safeNumber(aggregate.powerAvg),
+          powerFactorAvg: safeNumber(aggregate.powerFactorAvg, 1),
+          frequencyAvg: safeNumber(aggregate.frequencyAvg, 50),
+          energySource: aggregate.energySource ?? 'sensor',
+        };
+      })
+      .sort((a, b) => a.timestamp - b.timestamp);
+
+    if (combined.length === 0 && data) {
+      const timestamp = typeof data.timestamp === 'number' ? data.timestamp : Date.now();
+      const clamped = Math.min(Math.max(timestamp, startTime), endTime);
+      const fallbackDate = new Date(clamped);
+      fallbackDate.setMinutes(0, 0, 0);
+      const hour = fallbackDate.getHours();
+
+      if (isWithinHourRange(hour)) {
+        combined = [{
+          date: fallbackDate.toISOString().split('T')[0],
+          hour: `${hour.toString().padStart(2, '0')}:00`,
+          hourValue: hour,
+          kWh: 0,
+          timestamp: fallbackDate.getTime(),
+          voltageAvg: safeNumber((data as any)?.voltage),
+          currentAvg: safeNumber((data as any)?.current),
+          powerAvg: safeNumber((data as any)?.power),
+          powerFactorAvg: safeNumber((data as any)?.powerFactor, 1),
+          frequencyAvg: safeNumber((data as any)?.frequency, 50),
+          energySource: 'sensor',
+        }];
       }
-      // Move to next day
-      currentDate.setDate(currentDate.getDate() + 1);
-      dayCount++;
     }
 
-    return data;
-  }, [consumptionStartDate.getTime(), consumptionEndDate.getTime(), startHour, endHour]);
+    const energyDiagnostics = combined.reduce((acc, item) => {
+      if (item.energySource === 'derived') {
+        acc.derivedCount += 1;
+        acc.derivedTotal += item.kWh;
+      } else {
+        acc.sensorCount += 1;
+        acc.sensorTotal += item.kWh;
+      }
+      return acc;
+    }, { derivedCount: 0, sensorCount: 0, derivedTotal: 0, sensorTotal: 0 });
 
-  // PERFORMANCE: Separate time series data calculations
-  const voltageData = useMemo(() =>
-    generateTimeSeriesData(hourlyConsumption.length, 220, 8, true),
-    [hourlyConsumption.length, generateTimeSeriesData]
+    console.log('🚨🚨🚨 EMERGENCY DEBUG - CHART DATA:', {
+      startTime: new Date(startTime).toISOString(),
+      endTime: new Date(endTime).toISOString(),
+      hourRange: { start: startHour, end: endHour },
+      historicalDataCount: historicalData?.length ?? 0,
+      recentReadingsCount: recentReadings?.length ?? 0,
+      aggregateMapSize: aggregateMap.size,
+      minuteBucketsSize: minuteBuckets.size,
+      combinedLength: combined.length,
+      firstCombined: combined[0],
+      lastCombined: combined[combined.length - 1],
+      allCombinedKWhZero: combined.every(c => c.kWh === 0),
+      energyDiagnostics,
+      currentESP32Data: data ? {
+        voltage: data.voltage,
+        current: data.current,
+        power: data.power,
+        energy: data.energy
+      } : 'NO DATA'
+    });
+
+    return combined;
+  }, [
+    isReady,
+    consumptionStartDate,
+    consumptionEndDate,
+    startHour,
+    endHour,
+    historicalData,
+    recentReadings,
+    data,
+  ]);
+
+  // Get ESP32 readings from history store for charts
+  const filteredRecentReadings = useMemo(() => {
+    // Use ONLY recentReadings (last 24 hours of real ESP32 data at 2-second intervals)
+    if (!recentReadings || recentReadings.length === 0) {
+      console.log('⚠️ NO DATA: recentReadings is empty');
+      return [];
+    }
+
+    console.log(`📊 CHART SOURCE: Using ${recentReadings.length} readings from history store`);
+
+    // Return ALL recent readings for charts - no filtering
+    // This ensures charts show real-time ESP32 data
+    return recentReadings;
+  }, [recentReadings]);
+
+  // Extract real ESP32 parameter values for charts
+  const voltageData = useMemo(
+    () => filteredRecentReadings.map((r: any) => r.voltage || 0),
+    [filteredRecentReadings]
   );
 
-  const currentTrendData = useMemo(() =>
-    generateTimeSeriesData(hourlyConsumption.length, 3, 1.5, true),
-    [hourlyConsumption.length, generateTimeSeriesData]
+  const currentTrendData = useMemo(
+    () => filteredRecentReadings.map((r: any) => r.current || 0),
+    [filteredRecentReadings]
   );
 
-  const powerData = useMemo(() =>
-    generateTimeSeriesData(hourlyConsumption.length, 660, 200, false),
-    [hourlyConsumption.length, generateTimeSeriesData]
+  const powerData = useMemo(
+    () => filteredRecentReadings.map((r: any) => r.power || 0),
+    [filteredRecentReadings]
   );
 
-  const powerFactorData = useMemo(() =>
-    generateTimeSeriesData(hourlyConsumption.length, 0.95, 0.08, false),
-    [hourlyConsumption.length, generateTimeSeriesData]
+  const powerFactorData = useMemo(
+    () => filteredRecentReadings.map((r: any) => r.powerFactor || 0),
+    [filteredRecentReadings]
   );
 
-  const frequencyData = useMemo(() =>
-    generateTimeSeriesData(hourlyConsumption.length, 50.0, 0.3, false),
-    [hourlyConsumption.length, generateTimeSeriesData]
+  const frequencyData = useMemo(
+    () => filteredRecentReadings.map((r: any) => r.frequency || 0),
+    [filteredRecentReadings]
   );
 
-  // Safe stats for each series
+  // Extract timestamps for timeline
+  const timestamps = useMemo(
+    () => filteredRecentReadings.map((r: any) => r.timestamp),
+    [filteredRecentReadings]
+  );
+
+  // Stats calculations with FIXED SCALES to show true variations
+  // CRITICAL FIX: Using fixed min/max prevents auto-scaling that makes all charts look identical
+  // EDGE CASE FIX: Using 0 as minimum prevents off-screen rendering during outages/no-load
+
   const voltageStats = useMemo(() => {
-    const arr = voltageData; if (!arr || arr.length === 0) return { has:false, min:0, max:0, avg:0 } as const;
-    const sum = arr.reduce((a,b)=>a+b,0);
-    return { has:true, min: Math.min(...arr), max: Math.max(...arr), avg: sum/arr.length } as const;
+    if (voltageData.length === 0) return { has: false } as const;
+    const arr = voltageData;
+    const sum = arr.reduce((a, b) => a + b, 0);
+    return {
+      has: true,
+      min: 0,    // Fixed scale: 0-260V (shows voltage variations, allows outage display at bottom)
+      max: 260,
+      avg: sum / arr.length
+    } as const;
   }, [voltageData]);
+
   const currentStats = useMemo(() => {
-    const arr = currentTrendData; if (!arr || arr.length === 0) return { has:false, min:0, max:0, avg:0 } as const;
-    const sum = arr.reduce((a,b)=>a+b,0);
-    return { has:true, min: Math.min(...arr), max: Math.max(...arr), avg: sum/arr.length } as const;
+    if (currentTrendData.length === 0) return { has: false } as const;
+    const arr = currentTrendData;
+    const sum = arr.reduce((a, b) => a + b, 0);
+    return {
+      has: true,
+      min: 0,    // Fixed scale: 0-20A (shows current variations clearly)
+      max: 20,
+      avg: sum / arr.length
+    } as const;
   }, [currentTrendData]);
+
   const powerStats = useMemo(() => {
-    const arr = powerData; if (!arr || arr.length === 0) return { has:false, min:0, max:0, avg:0 } as const;
-    const sum = arr.reduce((a,b)=>a+b,0);
-    return { has:true, min: Math.min(...arr), max: Math.max(...arr), avg: sum/arr.length } as const;
+    if (powerData.length === 0) return { has: false } as const;
+    const arr = powerData;
+    const sum = arr.reduce((a, b) => a + b, 0);
+    return {
+      has: true,
+      min: 0,     // Fixed scale: 0-5000W (shows power variations clearly)
+      max: 5000,
+      avg: sum / arr.length
+    } as const;
   }, [powerData]);
-  const pfStats = useMemo(() => {
-    const arr = powerFactorData; if (!arr || arr.length === 0) return { has:false, min:0, max:0, avg:0 } as const;
-    const sum = arr.reduce((a,b)=>a+b,0);
-    return { has:true, min: Math.min(...arr), max: Math.max(...arr), avg: sum/arr.length } as const;
+
+  const powerFactorStats = useMemo(() => {
+    if (powerFactorData.length === 0) return { has: false } as const;
+    const arr = powerFactorData;
+    const sum = arr.reduce((a, b) => a + b, 0);
+    return {
+      has: true,
+      min: 0,     // Fixed scale: 0-1.0 (shows PF variations, allows no-load display at bottom)
+      max: 1.0,
+      avg: sum / arr.length
+    } as const;
   }, [powerFactorData]);
-  const freqStats = useMemo(() => {
-    const arr = frequencyData; if (!arr || arr.length === 0) return { has:false, min:0, max:0, avg:0 } as const;
-    const sum = arr.reduce((a,b)=>a+b,0);
-    return { has:true, min: Math.min(...arr), max: Math.max(...arr), avg: sum/arr.length } as const;
+
+  const frequencyStats = useMemo(() => {
+    if (frequencyData.length === 0) return { has: false } as const;
+    const arr = frequencyData;
+    const sum = arr.reduce((a, b) => a + b, 0);
+    return {
+      has: true,
+      min: 0,     // Fixed scale: 0-52Hz (shows frequency variations, allows outage display at bottom)
+      max: 52,
+      avg: sum / arr.length
+    } as const;
   }, [frequencyData]);
 
+  // PERFORMANCE: Memoize chart data with RTL support
+  const voltageChartData = useMemo(() =>
+    isRTL ? voltageData.slice().reverse() : voltageData,
+    [voltageData, isRTL]
+  );
+  const currentChartData = useMemo(() =>
+    isRTL ? currentTrendData.slice().reverse() : currentTrendData,
+    [currentTrendData, isRTL]
+  );
+  const powerChartData = useMemo(() =>
+    isRTL ? powerData.slice().reverse() : powerData,
+    [powerData, isRTL]
+  );
+  const powerFactorChartData = useMemo(() =>
+    isRTL ? powerFactorData.slice().reverse() : powerFactorData,
+    [powerFactorData, isRTL]
+  );
+  const frequencyChartData = useMemo(() =>
+    isRTL ? frequencyData.slice().reverse() : frequencyData,
+    [frequencyData, isRTL]
+  );
 
-  // PERFORMANCE: Memoize day calculations
-  const { daysDifference, isMultipleDays } = useMemo(() => {
-    const diff = Math.ceil((consumptionEndDate.getTime() - consumptionStartDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-    return {
-      daysDifference: diff,
-      isMultipleDays: diff > 1
-    };
-  }, [consumptionStartDate.getTime(), consumptionEndDate.getTime()]);
+  const hourLabel = useMemo(() => {
+    if (hourlyConsumption.length === 0) return [];
 
-  // PERFORMANCE: Memoize graph labels
-  const graphLabels = useMemo(() => {
-    const filterInterval = isMultipleDays ? (isRTL ? 4 : 3) : (isRTL ? 3 : 2);
     const labels = hourlyConsumption
-      .filter((_, index) => index % filterInterval === 0)
-      .map((item) => {
+      .slice(0, 50)
+      .filter((_: any, idx: number) => idx % 2 === 0)
+      .map((item: any) => {
         if (isMultipleDays) {
-          const date = new Date(item.timestamp);
-          const monthDay = `${(date.getMonth() + 1)}/${date.getDate()}`;
-          return `${monthDay} ${item.hour}`;
+          return `${item.date.slice(5)} ${item.hour}`;
         }
         return item.hour;
       });
@@ -369,6 +936,18 @@ export default function EventsScreen() {
     }));
 
     const total = data.reduce((sum: number, d: any) => sum + d.kWh, 0);
+    const max = Math.max(...data.map((d: any) => d.kWh), 0);
+
+    console.log('🔥🔥🔥 BAR CHART DATA:', {
+      dataCount: data.length,
+      totalConsumption: total,
+      maxConsumption: max,
+      hasData: data.length > 0,
+      allZero: data.every((d: any) => d.kWh === 0),
+      first3Items: data.slice(0, 3),
+      last3Items: data.slice(-3),
+      passedToBarChart: { dataLength: data.length, maxValue: max }
+    });
 
     return {
       currentData: data,
@@ -450,7 +1029,18 @@ export default function EventsScreen() {
     }
   }, []);
 
-  // Apply filter changes
+  // Hour range handlers
+  const handleStartHourChange = useCallback((hour: number) => {
+    setPendingStartHour(hour);
+    setHasPendingChanges(true);
+  }, []);
+
+  const handleEndHourChange = useCallback((hour: number) => {
+    setPendingEndHour(hour);
+    setHasPendingChanges(true);
+  }, []);
+
+  // Apply consumption filter changes
   const handleApplyFilters = useCallback(() => {
     setConsumptionStartDate(pendingStartDate);
     setConsumptionEndDate(pendingEndDate);
@@ -472,680 +1062,38 @@ export default function EventsScreen() {
     setShowHourRangeModal(false);
   }, [consumptionStartDate, consumptionEndDate, startHour, endHour]);
 
-  // PERFORMANCE: Memoize modal handlers
-  const handleDateRangePress = useCallback(() => {
-    setPendingStartDate(consumptionStartDate);
-    setPendingEndDate(consumptionEndDate);
-    setHasPendingChanges(false);
-    setShowDateRangeModal(true);
-  }, [consumptionStartDate, consumptionEndDate]);
+  const daysDifference = Math.ceil((consumptionEndDate.getTime() - consumptionStartDate.getTime()) / (1000 * 60 * 60 * 24));
+  const isMultipleDays = daysDifference > 1;
 
-  const handleHourRangePress = useCallback(() => {
-    setPendingStartHour(startHour);
-    setPendingEndHour(endHour);
-    setHasPendingChanges(false);
-    setShowHourRangeModal(true);
-  }, [startHour, endHour]);
+  const loadMoreEvents = useCallback(() => {
+    setEventsToShow(prev => prev + EVENTS_PER_PAGE);
+  }, []);
 
-  const closeDateRangeModal = useCallback(() => {
-    if (hasPendingChanges) {
-      handleCancelFilters();
-    } else {
-      setShowDateRangeModal(false);
-    }
-  }, [hasPendingChanges, handleCancelFilters]);
-
-  const closeHourRangeModal = useCallback(() => {
-    if (hasPendingChanges) {
-      handleCancelFilters();
-    } else {
-      setShowHourRangeModal(false);
-    }
-  }, [hasPendingChanges, handleCancelFilters]);
-
-  // Chart configuration removed - Skia charts handle their own config
-
-  // PERFORMANCE: Memoized parameter graphs component
-  const parameterGraphs = useMemo(() => {
-
+  if (!isReady) {
     return (
-      <View style={styles.graphsSection}>
-        <Text style={[styles.sectionTitle, { color: themeColors.text.primary }]}>
-          {t('events.graphs.title')}
-        </Text>
-        <Text style={[styles.sectionSubtitle, { color: themeColors.text.secondary }]}>
-          {t('events.graphs.subtitle')}
-        </Text>
-
-        {/* Voltage Graph */}
-        <Card style={[styles.graphCard, { backgroundColor: themeColors.surface }]}>
-          <View style={styles.graphHeader}>
-            <View style={styles.graphTitleRow}>
-              <Ionicons name="flash" size={20} color={themeColors.primary} />
-              <Text style={[styles.graphTitle, { color: themeColors.text.primary }]}>
-                {t('events.graphs.voltage.title')}
-              </Text>
-            </View>
-            {voltageStats.has && (
-              <View style={styles.graphStats}>
-                <View style={styles.graphStat}>
-                  <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.max')}</Text>
-                  <Text style={[styles.graphStatValue, { color: themeColors.danger }]}>
-                    {formatVoltage(voltageStats.max)}
-                  </Text>
-                </View>
-                <View style={styles.graphStat}>
-                  <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.avg')}</Text>
-                  <Text style={[styles.graphStatValue, { color: themeColors.text.primary }]}>
-                    {formatVoltage(voltageStats.avg)}
-                  </Text>
-                </View>
-                <View style={styles.graphStat}>
-                  <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.min')}</Text>
-                  <Text style={[styles.graphStatValue, { color: themeColors.success }]}>
-                    {formatVoltage(voltageStats.min)}
-                  </Text>
-                </View>
-              </View>
-            )}
-          </View>
-
-          <SkiaLineChart
-            data={isRTL ? voltageData.slice().reverse() : voltageData}
-            title=""
-            color="#42A5F5"
-            unit={t('home.units.voltage')}
-            height={200}
-            animated={true}
-            theme={theme}
-            showStats={false}
-            min={voltageStats.has ? voltageStats.min : undefined}
-            max={voltageStats.has ? voltageStats.max : undefined}
-            average={voltageStats.has ? voltageStats.avg : undefined}
-          />
-
-          <View style={[styles.safetyRange, { backgroundColor: themeColors.background }]}>
-            <Text style={[styles.safetyRangeText, { color: themeColors.text.secondary }]}>
-              {t('events.graphs.voltage.safeRange')}
-            </Text>
-          </View>
-        </Card>
-
-        {/* Current Graph */}
-        <Card style={[styles.graphCard, { backgroundColor: themeColors.surface }]}>
-          <View style={styles.graphHeader}>
-            <View style={styles.graphTitleRow}>
-              <Ionicons name="analytics" size={20} color={themeColors.warning} />
-              <Text style={[styles.graphTitle, { color: themeColors.text.primary }]}>
-                {t('events.graphs.current.title')}
-              </Text>
-            </View>
-            {currentStats.has && (
-              <View style={styles.graphStats}>
-                <View style={styles.graphStat}>
-                  <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.max')}</Text>
-                  <Text style={[styles.graphStatValue, { color: themeColors.danger }]}>
-                    {formatCurrent(currentStats.max)}
-                  </Text>
-                </View>
-                <View style={styles.graphStat}>
-                  <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.avg')}</Text>
-                  <Text style={[styles.graphStatValue, { color: themeColors.text.primary }]}>
-                    {formatCurrent(currentStats.avg)}
-                  </Text>
-                </View>
-                <View style={styles.graphStat}>
-                  <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.min')}</Text>
-                  <Text style={[styles.graphStatValue, { color: themeColors.success }]}>
-                    {formatCurrent(currentStats.min)}
-                  </Text>
-                </View>
-              </View>
-            )}
-          </View>
-
-          <SkiaLineChart
-            data={isRTL ? currentTrendData.slice().reverse() : currentTrendData}
-            title=""
-            color="#FFA726"
-            unit={t('home.units.current')}
-            height={200}
-            animated={true}
-            theme={theme}
-            showStats={false}
-            min={currentStats.has ? currentStats.min : undefined}
-            max={currentStats.has ? currentStats.max : undefined}
-            average={currentStats.has ? currentStats.avg : undefined}
-          />
-
-          <View style={[styles.safetyRange, { backgroundColor: themeColors.background }]}>
-            <Text style={[styles.safetyRangeText, { color: themeColors.text.secondary }]}>
-              {t('events.graphs.current.safeLimit', { value: 16, unit: t('home.units.current') })}
-            </Text>
-          </View>
-        </Card>
-
-        {/* Power Graph */}
-        <Card style={[styles.graphCard, { backgroundColor: themeColors.surface }]}>
-          <View style={styles.graphHeader}>
-            <View style={styles.graphTitleRow}>
-              <MaterialCommunityIcons name="lightning-bolt" size={20} color={themeColors.success} />
-              <Text style={[styles.graphTitle, { color: themeColors.text.primary }]}>
-                {t('events.graphs.power.title')}
-              </Text>
-            </View>
-            {powerStats.has && (
-              <View style={styles.graphStats}>
-                <View style={styles.graphStat}>
-                  <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.max')}</Text>
-                  <Text style={[styles.graphStatValue, { color: themeColors.danger }]}>
-                    {formatPower(powerStats.max)}
-                  </Text>
-                </View>
-                <View style={styles.graphStat}>
-                  <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.avg')}</Text>
-                  <Text style={[styles.graphStatValue, { color: themeColors.text.primary }]}>
-                    {formatPower(powerStats.avg)}
-                  </Text>
-                </View>
-                <View style={styles.graphStat}>
-                  <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.min')}</Text>
-                  <Text style={[styles.graphStatValue, { color: themeColors.success }]}>
-                    {formatPower(powerStats.min)}
-                  </Text>
-                </View>
-              </View>
-            )}
-          </View>
-
-          <SkiaLineChart
-            data={isRTL ? powerData.slice().reverse() : powerData}
-            title=""
-            color="#66BB6A"
-            unit={t('home.units.power')}
-            height={200}
-            animated={true}
-            theme={theme}
-            showStats={false}
-            min={powerStats.has ? powerStats.min : undefined}
-            max={powerStats.has ? powerStats.max : undefined}
-            average={powerStats.has ? powerStats.avg : undefined}
-          />
-        </Card>
-
-        {/* Power Factor Graph */}
-        <Card style={[styles.graphCard, { backgroundColor: themeColors.surface }]}>
-          <View style={styles.graphHeader}>
-            <View style={styles.graphTitleRow}>
-              <Ionicons name="analytics" size={20} color={themeColors.secondary} />
-              <Text style={[styles.graphTitle, { color: themeColors.text.primary }]}>
-                {t('events.graphs.powerFactor.title')}
-              </Text>
-            </View>
-            {pfStats.has && (
-              <View style={styles.graphStats}>
-                <View style={styles.graphStat}>
-                  <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.max')}</Text>
-                  <Text style={[styles.graphStatValue, { color: themeColors.success }]}>
-                    {formatPowerFactor(pfStats.max)}
-                  </Text>
-                </View>
-                <View style={styles.graphStat}>
-                  <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.avg')}</Text>
-                  <Text style={[styles.graphStatValue, { color: themeColors.text.primary }]}>
-                    {formatPowerFactor(pfStats.avg)}
-                  </Text>
-                </View>
-                <View style={styles.graphStat}>
-                  <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.min')}</Text>
-                  <Text style={[styles.graphStatValue, { color: themeColors.warning }]}>
-                    {formatPowerFactor(pfStats.min)}
-                  </Text>
-                </View>
-              </View>
-            )}
-          </View>
-
-          <SkiaLineChart
-            data={isRTL ? powerFactorData.slice().reverse() : powerFactorData}
-            title=""
-            color="#AB47BC"
-            unit=""
-            height={200}
-            animated={true}
-            theme={theme}
-            showStats={false}
-            min={pfStats.has ? pfStats.min : undefined}
-            max={pfStats.has ? pfStats.max : undefined}
-            average={pfStats.has ? pfStats.avg : undefined}
-          />
-
-          <View style={[styles.safetyRange, { backgroundColor: themeColors.background }]}>
-            <Text style={[styles.safetyRangeText, { color: themeColors.text.secondary }]}>
-              {t('events.graphs.powerFactor.goodRange')}
-            </Text>
-          </View>
-        </Card>
-
-        {/* Frequency Graph */}
-        <Card style={[styles.graphCard, { backgroundColor: themeColors.surface }]}>
-          <View style={styles.graphHeader}>
-            <View style={styles.graphTitleRow}>
-              <Ionicons name="pulse" size={20} color={themeColors.info} />
-              <Text style={[styles.graphTitle, { color: themeColors.text.primary }]}>
-                {t('events.graphs.frequency.title')}
-              </Text>
-            </View>
-            {freqStats.has && (
-              <View style={styles.graphStats}>
-                <View style={styles.graphStat}>
-                  <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.max')}</Text>
-                  <Text style={[styles.graphStatValue, { color: themeColors.danger }]}>
-                    {formatFrequency(freqStats.max)}
-                  </Text>
-                </View>
-                <View style={styles.graphStat}>
-                  <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.avg')}</Text>
-                  <Text style={[styles.graphStatValue, { color: themeColors.text.primary }]}>
-                    {formatFrequency(freqStats.avg)}
-                  </Text>
-                </View>
-                <View style={styles.graphStat}>
-                  <Text style={[styles.graphStatLabel, { color: themeColors.text.secondary }]}>{t('events.graphs.stats.min')}</Text>
-                  <Text style={[styles.graphStatValue, { color: themeColors.success }]}>
-                    {formatFrequency(freqStats.min)}
-                  </Text>
-                </View>
-              </View>
-            )}
-          </View>
-
-          <SkiaLineChart
-            data={isRTL ? frequencyData.slice().reverse() : frequencyData}
-            title=""
-            color="#26C6DA"
-            unit={t('home.units.frequency')}
-            height={200}
-            animated={true}
-            theme={theme}
-            showStats={false}
-            min={freqStats.has ? freqStats.min : undefined}
-            max={freqStats.has ? freqStats.max : undefined}
-            average={freqStats.has ? freqStats.avg : undefined}
-          />
-
-          <View style={[styles.safetyRange, { backgroundColor: themeColors.background }]}>
-            <Text style={[styles.safetyRangeText, { color: themeColors.text.secondary }]}>
-              {t('events.graphs.frequency.standard')}
-            </Text>
-          </View>
-        </Card>
-      </View>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.background }]}>
+        <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+          <Text style={[styles.loadingText, { color: themeColors.text.primary }]}>
+            Loading...
+          </Text>
+        </View>
+      </SafeAreaView>
     );
-  }, [graphLabels, voltageData, currentTrendData, powerData, powerFactorData, frequencyData, isRTL, themeColors, t, theme]);
-
-  // Render date range picker
-  const renderDateRangePicker = useCallback(() => (
-    <Card style={[styles.dateRangeCard, { backgroundColor: themeColors.surface }]}>
-      <View style={styles.dateRangeHeader}>
-        <Ionicons name="calendar" size={20} color={themeColors.primary} />
-        <Text style={[styles.dateRangeTitle, { color: themeColors.text.primary }]}>
-          {t('events.dateFilter.title')}
-        </Text>
-      </View>
-
-      {/* Quick Presets - Same as Analytics */}
-      <View style={styles.quickPresetsContainer}>
-        <TouchableOpacity
-          onPress={() => {
-            const today = new Date();
-            setStartDate(today);
-            setEndDate(today);
-          }}
-          style={[styles.presetButton, { backgroundColor: themeColors.background, borderColor: themeColors.primary }]}
-        >
-          <Ionicons name="today-outline" size={16} color={themeColors.primary} />
-          <Text style={[styles.presetButtonText, { color: themeColors.text.primary }]}>
-            {t('events.consumption.datePresets.today')}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => {
-            const yesterday = new Date();
-            yesterday.setDate(yesterday.getDate() - 1);
-            setStartDate(yesterday);
-            setEndDate(yesterday);
-          }}
-          style={[styles.presetButton, { backgroundColor: themeColors.background, borderColor: themeColors.primary }]}
-        >
-          <Text style={[styles.presetButtonText, { color: themeColors.text.primary }]}>
-            {t('events.consumption.datePresets.yesterday')}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => {
-            const today = new Date();
-            const oneWeekAgo = new Date();
-            oneWeekAgo.setDate(oneWeekAgo.getDate() - 6);
-            setPendingEventStartDate(oneWeekAgo);
-            setPendingEventEndDate(today);
-            setHasEventPendingChanges(true);
-          }}
-          style={[styles.presetButton, { backgroundColor: themeColors.background, borderColor: themeColors.primary }]}
-        >
-          <Text style={[styles.presetButtonText, { color: themeColors.text.primary }]}>
-            {t('events.presets.lastWeek')}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => {
-            const today = new Date();
-            const oneMonthAgo = new Date();
-            oneMonthAgo.setDate(oneMonthAgo.getDate() - 29);
-            setPendingEventStartDate(oneMonthAgo);
-            setPendingEventEndDate(today);
-            setHasEventPendingChanges(true);
-          }}
-          style={[styles.presetButton, { backgroundColor: themeColors.background, borderColor: themeColors.primary }]}
-        >
-          <Text style={[styles.presetButtonText, { color: themeColors.text.primary }]}>
-            {t('events.presets.lastMonth')}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.dateRangeRow}>
-        {/* Start Date */}
-        <View style={styles.dateRangeItem}>
-          <Text style={[styles.dateRangeLabel, { color: themeColors.text.secondary }]}>
-            {t('events.dateFilter.from')}
-          </Text>
-          <TouchableOpacity
-            onPress={() => setShowStartPicker(true)}
-            style={[styles.dateButton, { backgroundColor: themeColors.background, borderColor: themeColors.border }]}
-          >
-            <Ionicons name="calendar-outline" size={16} color={themeColors.primary} />
-            <View style={styles.dateTextContainer}>
-              <Text style={[styles.dateText, { color: themeColors.text.primary }]}>
-                {formatDateLabel(startDate)}
-              </Text>
-              <Text style={[styles.timeText, { color: themeColors.text.secondary }]}>
-                {formatTimeLabel(startDate)}
-              </Text>
-            </View>
-          </TouchableOpacity>
-        </View>
-
-        {/* End Date */}
-        <View style={styles.dateRangeItem}>
-          <Text style={[styles.dateRangeLabel, { color: themeColors.text.secondary }]}>
-            {t('events.dateFilter.to')}
-          </Text>
-          <TouchableOpacity
-            onPress={() => setShowEndPicker(true)}
-            style={[styles.dateButton, { backgroundColor: themeColors.background, borderColor: themeColors.border }]}
-          >
-            <Ionicons name="calendar-outline" size={16} color={themeColors.primary} />
-            <View style={styles.dateTextContainer}>
-              <Text style={[styles.dateText, { color: themeColors.text.primary }]}>
-                {formatDateLabel(endDate)}
-              </Text>
-              <Text style={[styles.timeText, { color: themeColors.text.secondary }]}>
-                {formatTimeLabel(endDate)}
-              </Text>
-            </View>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Date Pickers */}
-      {showStartPicker && (
-        <DateTimePicker
-          value={pendingEventStartDate}
-          mode="datetime"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={onStartDateChange}
-          maximumDate={pendingEventEndDate}
-        />
-      )}
-
-      {showEndPicker && (
-        <DateTimePicker
-          value={pendingEventEndDate}
-          mode="datetime"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={onEndDateChange}
-          minimumDate={pendingEventStartDate}
-          maximumDate={new Date()}
-        />
-      )}
-
-      {/* Apply/Cancel Buttons */}
-      {hasEventPendingChanges && (
-        <View style={styles.modalButtons}>
-          <TouchableOpacity
-            onPress={handleCancelEventFilters}
-            style={[styles.modalButton, styles.cancelButton, { backgroundColor: themeColors.background, borderColor: themeColors.border }]}
-          >
-            <Text style={[styles.cancelButtonText, { color: themeColors.text.secondary }]}>
-              {t('common.cancel')}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={handleApplyEventFilters}
-            style={[styles.modalButton, styles.applyButton, { backgroundColor: themeColors.primary }]}
-          >
-            <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
-            <Text style={styles.applyButtonText}>
-              {t('common.apply')}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
-    </Card>
-  ), [themeColors, t, startDate, endDate, pendingEventStartDate, pendingEventEndDate, showStartPicker, showEndPicker, hasEventPendingChanges, formatDateLabel, formatTimeLabel, onStartDateChange, onEndDateChange, handleApplyEventFilters, handleCancelEventFilters]);
-
-  // Render safety events filter
-  const renderSafetyFilters = useCallback(() => (
-    <Card style={[styles.safetyCard, { backgroundColor: themeColors.surface }]}>
-      <View style={styles.safetyHeader}>
-        <Ionicons name="shield-checkmark" size={20} color={themeColors.danger} />
-        <Text style={[styles.safetyTitle, { color: themeColors.text.primary }]}>
-          {t('events.safetyFilter.title')}
-        </Text>
-      </View>
-
-      <View style={styles.safetyFilters}>
-        {safetyEventTypes.map(({ label, value, icon }) => {
-          const isSelected = selectedEventTypes.includes(value);
-          return (
-            <TouchableOpacity
-              key={value}
-              onPress={() => toggleEventType(value)}
-              style={[
-                styles.safetyFilterChip,
-                {
-                  backgroundColor: isSelected ? themeColors.danger + '20' : themeColors.background,
-                  borderColor: isSelected ? themeColors.danger : themeColors.border,
-                }
-              ]}
-            >
-              <Ionicons
-                name={icon as any}
-                size={16}
-                color={isSelected ? themeColors.danger : themeColors.text.secondary}
-              />
-              <Text style={[
-                styles.safetyFilterText,
-                { color: isSelected ? themeColors.danger : themeColors.text.secondary }
-              ]}>
-                {label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-
-      {selectedEventTypes.length > 0 && (
-        <TouchableOpacity
-          onPress={() => setSelectedEventTypes([])}
-          style={styles.clearFiltersButton}
-        >
-          <Text style={[styles.clearFiltersText, { color: themeColors.primary }]}>
-            {t('events.safetyFilter.clearAll')}
-          </Text>
-        </TouchableOpacity>
-      )}
-    </Card>
-  ), [themeColors, t, selectedEventTypes, safetyEventTypes, toggleEventType]);
-
-  // Render statistics card
-  const renderStatistics = useCallback(() => (
-    <Card style={styles.statsCard}>
-      <Text style={[styles.sectionTitle, { color: themeColors.text.primary }]}>
-        {t('events.statistics.title')}
-      </Text>
-      <View style={styles.statsRow}>
-        <View style={styles.statItem}>
-          <Text style={[styles.statValue, { color: themeColors.primary }]}>
-            {stats.totalEvents}
-          </Text>
-          <Text style={[styles.statLabel, { color: themeColors.text.secondary }]}>
-            {t('events.statistics.totalEvents')}
-          </Text>
-        </View>
-        <View style={styles.statItem}>
-          <Text style={[styles.statValue, { color: themeColors.danger }]}>
-            {stats.totalOutages}
-          </Text>
-          <Text style={[styles.statLabel, { color: themeColors.text.secondary }]}>
-            {t('events.statistics.outages')}
-          </Text>
-        </View>
-        <View style={styles.statItem}>
-          <Text style={[styles.statValue, { color: themeColors.warning }]}>
-            {formatDurationShort(stats.averageOutageDuration)}
-          </Text>
-          <Text style={[styles.statLabel, { color: themeColors.text.secondary }]}>
-            {t('events.statistics.avgDuration')}
-          </Text>
-        </View>
-      </View>
-    </Card>
-  ), [themeColors, t, stats]);
-
-  // Render event item
-  const renderEventItem = useCallback(({ item }: { item: typeof events[0] }) => {
-    const eventColor = getEventColor(item.type);
-    const icon = getEventIcon(item.type);
-
-    return (
-      <View
-        style={[
-          styles.eventCard,
-          {
-            backgroundColor: themeColors.surface,
-            borderLeftColor: eventColor,
-          },
-        ]}
-      >
-        <View style={styles.eventHeader}>
-          <View style={styles.eventIconContainer}>
-            <View
-              style={[
-                styles.eventIconCircle,
-                { backgroundColor: eventColor + '20' },
-              ]}
-            >
-              <Ionicons name={icon} size={20} color={eventColor} />
-            </View>
-          </View>
-          <View style={styles.eventContent}>
-            <Text style={[styles.eventDescription, { color: themeColors.text.primary }]}>
-              {item.description}
-            </Text>
-            <Text style={[styles.eventTime, { color: themeColors.text.secondary }]}>
-              {formatTimestamp(item.timestamp)}
-            </Text>
-          </View>
-        </View>
-
-        {item.readings && (
-          <View style={styles.eventDetails}>
-            <View style={styles.eventDetailItem}>
-              <Ionicons name="flash-outline" size={14} color={themeColors.text.secondary} />
-              <Text style={[styles.eventDetailText, { color: themeColors.text.secondary }]}>
-                {formatVoltage(item.readings.voltage)}
-              </Text>
-            </View>
-            <View style={styles.eventDetailItem}>
-              <Ionicons name="analytics-outline" size={14} color={themeColors.text.secondary} />
-              <Text style={[styles.eventDetailText, { color: themeColors.text.secondary }]}>
-                {formatCurrent(item.readings.current)}
-              </Text>
-            </View>
-            <View style={styles.eventDetailItem}>
-              <Ionicons name="speedometer-outline" size={14} color={themeColors.text.secondary} />
-              <Text style={[styles.eventDetailText, { color: themeColors.text.secondary }]}>
-                {formatPower(item.readings.power)}
-              </Text>
-            </View>
-          </View>
-        )}
-
-        {item.duration && (
-          <View style={styles.durationBadge}>
-            <Ionicons name="time-outline" size={14} color={themeColors.danger} />
-            <Text style={[styles.durationText, { color: themeColors.danger }]}>
-              {formatDurationShort(item.duration)}
-            </Text>
-          </View>
-        )}
-      </View>
-    );
-  }, [themeColors]);
-
-  // Filter events by selected types and date range
-  const filteredEvents = useMemo(() => events.filter(event => {
-    // Check date range
-    const eventDate = new Date(event.timestamp);
-    const isInDateRange = eventDate >= startDate && eventDate <= endDate;
-
-    // Check event type filter
-    const matchesType = selectedEventTypes.length === 0 || selectedEventTypes.includes(event.type);
-
-    return isInDateRange && matchesType;
-  }), [events, startDate, endDate, selectedEventTypes]);
+  }
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: themeColors.background }]}
-      edges={['top']}
-    >
-      {/* Header with Tabs */}
-      <View style={[styles.header, { borderBottomColor: themeColors.border }]}>
-        <Text style={[styles.headerTitle, { color: themeColors.text.primary }]}>
-          {t('events.title')}
-        </Text>
-
-        {/* Tab Switcher */}
-        <View style={[styles.tabContainer, { backgroundColor: themeColors.background }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: themeColors.background }]}>
+      <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+        {/* Tab Selector */}
+        <View style={[styles.tabContainer, { backgroundColor: themeColors.surface }]}>
           <TouchableOpacity
             style={[
-              styles.tabButton,
-              activeTab === 'consumption' && styles.activeTabButton,
-              activeTab === 'consumption' && { backgroundColor: themeColors.primary },
+              styles.tab,
+              activeTab === 'consumption' && styles.activeTab,
+              activeTab === 'consumption' && { backgroundColor: themeColors.primary }
             ]}
             onPress={() => setActiveTab('consumption')}
           >
-            <Ionicons
-              name="analytics"
-              size={18}
-              color={activeTab === 'consumption' ? '#FFFFFF' : themeColors.text.secondary}
-            />
             <Text
               style={[
                 styles.tabText,
@@ -1158,1169 +1106,1181 @@ export default function EventsScreen() {
 
           <TouchableOpacity
             style={[
-              styles.tabButton,
-              activeTab === 'events' && styles.activeTabButton,
-              activeTab === 'events' && { backgroundColor: themeColors.primary },
+              styles.tab,
+              activeTab === 'eventLog' && styles.activeTab,
+              activeTab === 'eventLog' && { backgroundColor: themeColors.primary }
             ]}
-            onPress={() => setActiveTab('events')}
+            onPress={() => setActiveTab('eventLog')}
           >
-            <Ionicons
-              name="list"
-              size={18}
-              color={activeTab === 'events' ? '#FFFFFF' : themeColors.text.secondary}
-            />
             <Text
               style={[
                 styles.tabText,
-                { color: activeTab === 'events' ? '#FFFFFF' : themeColors.text.secondary }
+                { color: activeTab === 'eventLog' ? '#FFFFFF' : themeColors.text.secondary }
               ]}
             >
               {t('events.tabs.eventLog')}
             </Text>
           </TouchableOpacity>
         </View>
-      </View>
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {activeTab === 'consumption' ? (
-          <>
-            {/* Energy Consumption Overview */}
-            <ConsumptionOverview
-              themeColors={themeColors}
-              t={t}
-              formatDateLabel={formatDateLabel}
-              formatEnergy={formatEnergy}
-              consumptionStartDate={consumptionStartDate}
-              consumptionEndDate={consumptionEndDate}
-              startHour={startHour}
-              endHour={endHour}
-              totalConsumption={totalConsumption}
-              currentData={currentData}
-              maxConsumption={maxConsumption}
-              avgConsumption={avgConsumption}
-              daysDifference={daysDifference}
-              isMultipleDays={isMultipleDays}
-              currentHour={currentHour}
-              onDateRangePress={handleDateRangePress}
-              onHourRangePress={handleHourRangePress}
-            />
+        {/* Content based on active tab */}
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {activeTab === 'consumption' ? (
+            <>
+              {/* Consumption Bar Chart Section */}
+              <ConsumptionOverview
+                themeColors={themeColors}
+                t={t}
+                formatDateLabel={formatDateLabel}
+                formatEnergy={formatEnergy}
+                consumptionStartDate={consumptionStartDate}
+                consumptionEndDate={consumptionEndDate}
+                startHour={startHour}
+                endHour={endHour}
+                totalConsumption={totalConsumption}
+                currentData={currentData}
+                maxConsumption={maxConsumption}
+                avgConsumption={avgConsumption}
+                daysDifference={daysDifference}
+                isMultipleDays={isMultipleDays}
+                currentHour={currentHour}
+                onDateRangePress={() => setShowDateRangeModal(true)}
+                onHourRangePress={() => setShowHourRangeModal(true)}
+              />
 
-            {/* Electrical Parameter Graphs (Voltage, Current, Power Curves) */}
-            {parameterGraphs}
-          </>
-        ) : (
-          <>
-            {/* Date Range Picker */}
-            {renderDateRangePicker()}
-
-            {/* Safety Events Filter */}
-            {renderSafetyFilters()}
-
-            {/* Statistics */}
-            {renderStatistics()}
-
-            {/* Events List */}
-            <View style={styles.eventsSection}>
-              <Text style={[styles.sectionTitle, { color: themeColors.text.primary }]}>
-                {t('events.eventsList.title')} ({filteredEvents.length})
-              </Text>
-              {filteredEvents.length > 0 ? (
-                filteredEvents.map((event) => (
-                  <View key={event.id}>{renderEventItem({ item: event })}</View>
-                ))
-              ) : (
-                <View style={styles.emptyState}>
-                  <Ionicons name="document-outline" size={48} color={themeColors.text.secondary} />
-                  <Text style={[styles.emptyText, { color: themeColors.text.secondary }]}>
-                    {t('events.eventsList.empty')}
+              {/* Parameter Trends Section */}
+              <Card style={[styles.trendsCard, { backgroundColor: themeColors.surface }]}>
+                <View style={styles.trendsHeader}>
+                  <MaterialCommunityIcons name="chart-line" size={24} color={themeColors.primary} />
+                  <Text style={[styles.sectionTitle, { color: themeColors.text.primary, marginBottom: 0, marginLeft: spacing.sm }]}>
+                    {t('events.graphs.title')}
                   </Text>
                 </View>
-              )}
-            </View>
-          </>
-        )}
-      </ScrollView>
-
-      {/* Date Range Modal */}
-      {showDateRangeModal && (
-        <View style={styles.modalOverlay}>
-          <View style={[styles.filterModal, { backgroundColor: themeColors.surface }]}>
-            <View style={styles.filterModalHeader}>
-              <View style={styles.modalTitleRow}>
-                <Ionicons name="calendar" size={24} color={themeColors.primary} />
-                <Text style={[styles.filterModalTitle, { color: themeColors.text.primary }]}>
-                  {t('events.consumption.dateRange')}
+                <Text style={[styles.sectionSubtitle, { color: themeColors.text.secondary }]}>
+                  {t('events.graphs.subtitle')}
                 </Text>
+
+                {/* Voltage Trend Chart */}
+                <View style={styles.chartWrapper}>
+                  <View style={styles.chartTitleRow}>
+                    <MaterialCommunityIcons name="flash" size={20} color="#42A5F5" />
+                    <Text style={[styles.chartTitle, { color: themeColors.text.primary }]}>
+                      {t('events.graphs.voltage.title')}
+                    </Text>
+                  </View>
+
+                  {/* Voltage Stats (if data exists) */}
+                  {voltageStats.has && (
+                    <View style={styles.statsRow}>
+                      <View style={styles.statBox}>
+                        <Text style={[styles.statLabel, { color: themeColors.text.secondary }]}>
+                          {t('events.graphs.stats.max')}
+                        </Text>
+                        <Text style={[styles.statValue, { color: themeColors.danger }]}>
+                          {voltageStats.max.toFixed(1)}{t('home.units.voltage')}
+                        </Text>
+                      </View>
+                      <View style={styles.statBox}>
+                        <Text style={[styles.statLabel, { color: themeColors.text.secondary }]}>
+                          {t('events.graphs.stats.avg')}
+                        </Text>
+                        <Text style={[styles.statValue, { color: themeColors.text.primary }]}>
+                          {voltageStats.avg.toFixed(1)}{t('home.units.voltage')}
+                        </Text>
+                      </View>
+                      <View style={styles.statBox}>
+                        <Text style={[styles.statLabel, { color: themeColors.text.secondary }]}>
+                          {t('events.graphs.stats.min')}
+                        </Text>
+                        <Text style={[styles.statValue, { color: themeColors.success }]}>
+                          {voltageStats.min.toFixed(1)}{t('home.units.voltage')}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+
+                  <SkiaLineChart
+                    data={voltageChartData}
+                    timestamps={isRTL ? [...timestamps].reverse() : timestamps}
+                    title=""
+                    color="#42A5F5"
+                    unit={t('home.units.voltage')}
+                    height={220}
+                    animated={true}
+                    theme={theme}
+                    showStats={false}
+                    showTimeline={true}
+                    showYAxis={true}
+                    min={voltageStats.has ? voltageStats.min : undefined}
+                    max={voltageStats.has ? voltageStats.max : undefined}
+                    average={voltageStats.has ? voltageStats.avg : undefined}
+                  />
+                </View>
+
+                {/* Current Trend Chart */}
+                <View style={styles.chartWrapper}>
+                  <View style={styles.chartTitleRow}>
+                    <MaterialCommunityIcons name="current-ac" size={20} color="#FFA726" />
+                    <Text style={[styles.chartTitle, { color: themeColors.text.primary }]}>
+                      {t('events.graphs.current.title')}
+                    </Text>
+                  </View>
+
+                  {/* Current Stats */}
+                  {currentStats.has && (
+                    <View style={styles.statsRow}>
+                      <View style={styles.statBox}>
+                        <Text style={[styles.statLabel, { color: themeColors.text.secondary }]}>
+                          {t('events.graphs.stats.max')}
+                        </Text>
+                        <Text style={[styles.statValue, { color: themeColors.danger }]}>
+                          {currentStats.max.toFixed(2)}{t('home.units.current')}
+                        </Text>
+                      </View>
+                      <View style={styles.statBox}>
+                        <Text style={[styles.statLabel, { color: themeColors.text.secondary }]}>
+                          {t('events.graphs.stats.avg')}
+                        </Text>
+                        <Text style={[styles.statValue, { color: themeColors.text.primary }]}>
+                          {currentStats.avg.toFixed(2)}{t('home.units.current')}
+                        </Text>
+                      </View>
+                      <View style={styles.statBox}>
+                        <Text style={[styles.statLabel, { color: themeColors.text.secondary }]}>
+                          {t('events.graphs.stats.min')}
+                        </Text>
+                        <Text style={[styles.statValue, { color: themeColors.success }]}>
+                          {currentStats.min.toFixed(2)}{t('home.units.current')}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+
+                  <SkiaLineChart
+                    data={currentChartData}
+                    timestamps={isRTL ? [...timestamps].reverse() : timestamps}
+                    title=""
+                    color="#FFA726"
+                    unit={t('home.units.current')}
+                    height={220}
+                    animated={true}
+                    theme={theme}
+                    showStats={false}
+                    showTimeline={true}
+                    showYAxis={true}
+                    min={currentStats.has ? currentStats.min : undefined}
+                    max={currentStats.has ? currentStats.max : undefined}
+                    average={currentStats.has ? currentStats.avg : undefined}
+                  />
+                </View>
+
+                {/* Power Trend Chart */}
+                <View style={styles.chartWrapper}>
+                  <View style={styles.chartTitleRow}>
+                    <MaterialCommunityIcons name="power-plug" size={20} color="#66BB6A" />
+                    <Text style={[styles.chartTitle, { color: themeColors.text.primary }]}>
+                      {t('events.graphs.power.title')}
+                    </Text>
+                  </View>
+
+                  {/* Power Stats */}
+                  {powerStats.has && (
+                    <View style={styles.statsRow}>
+                      <View style={styles.statBox}>
+                        <Text style={[styles.statLabel, { color: themeColors.text.secondary }]}>
+                          {t('events.graphs.stats.max')}
+                        </Text>
+                        <Text style={[styles.statValue, { color: themeColors.danger }]}>
+                          {powerStats.max.toFixed(0)}{t('home.units.power')}
+                        </Text>
+                      </View>
+                      <View style={styles.statBox}>
+                        <Text style={[styles.statLabel, { color: themeColors.text.secondary }]}>
+                          {t('events.graphs.stats.avg')}
+                        </Text>
+                        <Text style={[styles.statValue, { color: themeColors.text.primary }]}>
+                          {powerStats.avg.toFixed(0)}{t('home.units.power')}
+                        </Text>
+                      </View>
+                      <View style={styles.statBox}>
+                        <Text style={[styles.statLabel, { color: themeColors.text.secondary }]}>
+                          {t('events.graphs.stats.min')}
+                        </Text>
+                        <Text style={[styles.statValue, { color: themeColors.success }]}>
+                          {powerStats.min.toFixed(0)}{t('home.units.power')}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+
+                  <SkiaLineChart
+                    data={powerChartData}
+                    timestamps={isRTL ? [...timestamps].reverse() : timestamps}
+                    title=""
+                    color="#66BB6A"
+                    unit={t('home.units.power')}
+                    height={220}
+                    animated={true}
+                    theme={theme}
+                    showStats={false}
+                    showTimeline={true}
+                    showYAxis={true}
+                    min={powerStats.has ? powerStats.min : undefined}
+                    max={powerStats.has ? powerStats.max : undefined}
+                    average={powerStats.has ? powerStats.avg : undefined}
+                  />
+                </View>
+
+                {/* Power Factor Chart */}
+                <View style={styles.chartWrapper}>
+                  <View style={styles.chartTitleRow}>
+                    <MaterialCommunityIcons name="sine-wave" size={20} color="#AB47BC" />
+                    <Text style={[styles.chartTitle, { color: themeColors.text.primary }]}>
+                      {t('events.graphs.powerFactor.title')}
+                    </Text>
+                  </View>
+
+                  {/* Power Factor Stats */}
+                  {powerFactorStats.has && (
+                    <View style={styles.statsRow}>
+                      <View style={styles.statBox}>
+                        <Text style={[styles.statLabel, { color: themeColors.text.secondary }]}>
+                          {t('events.graphs.stats.max')}
+                        </Text>
+                        <Text style={[styles.statValue, { color: themeColors.success }]}>
+                          {powerFactorStats.max.toFixed(3)}
+                        </Text>
+                      </View>
+                      <View style={styles.statBox}>
+                        <Text style={[styles.statLabel, { color: themeColors.text.secondary }]}>
+                          {t('events.graphs.stats.avg')}
+                        </Text>
+                        <Text style={[styles.statValue, { color: themeColors.text.primary }]}>
+                          {powerFactorStats.avg.toFixed(3)}
+                        </Text>
+                      </View>
+                      <View style={styles.statBox}>
+                        <Text style={[styles.statLabel, { color: themeColors.text.secondary }]}>
+                          {t('events.graphs.stats.min')}
+                        </Text>
+                        <Text style={[styles.statValue, { color: themeColors.warning }]}>
+                          {powerFactorStats.min.toFixed(3)}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+
+                  <SkiaLineChart
+                    data={powerFactorChartData}
+                    timestamps={isRTL ? [...timestamps].reverse() : timestamps}
+                    title=""
+                    color="#AB47BC"
+                    unit=""
+                    height={220}
+                    animated={true}
+                    theme={theme}
+                    showStats={false}
+                    showTimeline={true}
+                    showYAxis={true}
+                    min={powerFactorStats.has ? powerFactorStats.min : undefined}
+                    max={powerFactorStats.has ? powerFactorStats.max : undefined}
+                    average={powerFactorStats.has ? powerFactorStats.avg : undefined}
+                  />
+                </View>
+
+                {/* Frequency Chart */}
+                <View style={styles.chartWrapper}>
+                  <View style={styles.chartTitleRow}>
+                    <MaterialCommunityIcons name="waveform" size={20} color="#26C6DA" />
+                    <Text style={[styles.chartTitle, { color: themeColors.text.primary }]}>
+                      {t('events.graphs.frequency.title')}
+                    </Text>
+                  </View>
+
+                  {/* Frequency Stats */}
+                  {frequencyStats.has && (
+                    <View style={styles.statsRow}>
+                      <View style={styles.statBox}>
+                        <Text style={[styles.statLabel, { color: themeColors.text.secondary }]}>
+                          {t('events.graphs.stats.max')}
+                        </Text>
+                        <Text style={[styles.statValue, { color: themeColors.danger }]}>
+                          {frequencyStats.max.toFixed(2)}{t('home.units.frequency')}
+                        </Text>
+                      </View>
+                      <View style={styles.statBox}>
+                        <Text style={[styles.statLabel, { color: themeColors.text.secondary }]}>
+                          {t('events.graphs.stats.avg')}
+                        </Text>
+                        <Text style={[styles.statValue, { color: themeColors.text.primary }]}>
+                          {frequencyStats.avg.toFixed(2)}{t('home.units.frequency')}
+                        </Text>
+                      </View>
+                      <View style={styles.statBox}>
+                        <Text style={[styles.statLabel, { color: themeColors.text.secondary }]}>
+                          {t('events.graphs.stats.min')}
+                        </Text>
+                        <Text style={[styles.statValue, { color: themeColors.success }]}>
+                          {frequencyStats.min.toFixed(2)}{t('home.units.frequency')}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+
+                  <SkiaLineChart
+                    data={frequencyChartData}
+                    timestamps={isRTL ? [...timestamps].reverse() : timestamps}
+                    title=""
+                    color="#26C6DA"
+                    unit={t('home.units.frequency')}
+                    height={220}
+                    animated={true}
+                    theme={theme}
+                    showStats={false}
+                    showTimeline={true}
+                    showYAxis={true}
+                    min={frequencyStats.has ? frequencyStats.min : undefined}
+                    max={frequencyStats.has ? frequencyStats.max : undefined}
+                    average={frequencyStats.has ? frequencyStats.avg : undefined}
+                  />
+                </View>
+              </Card>
+            </>
+          ) : (
+            <>
+              {/* System Events Statistics */}
+              <Card style={[styles.statsCard, { backgroundColor: themeColors.surface }]}>
+                <Text style={[styles.sectionTitle, { color: themeColors.text.primary }]}>
+                  {t('events.statistics.title')}
+                </Text>
+
+                <View style={styles.statsGrid}>
+                  <View style={styles.statCard}>
+                    <MaterialCommunityIcons name="alert-circle" size={28} color={themeColors.primary} />
+                    <Text style={[styles.statNumber, { color: themeColors.text.primary }]}>
+                      {stats.totalEvents}
+                    </Text>
+                    <Text style={[styles.statDescription, { color: themeColors.text.secondary }]}>
+                      {t('events.statistics.totalEvents')}
+                    </Text>
+                  </View>
+
+                  <View style={styles.statCard}>
+                    <MaterialCommunityIcons name="flash-off" size={28} color={themeColors.danger} />
+                    <Text style={[styles.statNumber, { color: themeColors.text.primary }]}>
+                      {stats.totalOutages}
+                    </Text>
+                    <Text style={[styles.statDescription, { color: themeColors.text.secondary }]}>
+                      {t('events.statistics.outages')}
+                    </Text>
+                  </View>
+
+                  <View style={styles.statCard}>
+                    <MaterialCommunityIcons name="clock-outline" size={28} color={themeColors.warning} />
+                    <Text style={[styles.statNumber, { color: themeColors.text.primary }]}>
+                      {formatDurationShort(stats.averageOutageDuration)}
+                    </Text>
+                    <Text style={[styles.statDescription, { color: themeColors.text.secondary }]}>
+                      {t('events.statistics.avgDuration')}
+                    </Text>
+                  </View>
+                </View>
+              </Card>
+
+              {/* Event Filter Button */}
+              <TouchableOpacity
+                style={[styles.filterChip, { backgroundColor: themeColors.surface }]}
+                onPress={() => setShowEventFilterModal(true)}
+              >
+                <Ionicons name="filter" size={20} color={themeColors.primary} />
+                <Text style={[styles.filterChipText, { color: themeColors.text.primary }]}>
+                  {t('common.filter')}
+                </Text>
+              </TouchableOpacity>
+
+              {/* Events List */}
+              <Card style={[styles.eventsCard, { backgroundColor: themeColors.surface }]}>
+                <Text style={[styles.sectionTitle, { color: themeColors.text.primary }]}>
+                  {t('events.eventsList.title')}
+                </Text>
+
+                {events.length === 0 ? (
+                  <View style={styles.emptyState}>
+                    <Ionicons name="calendar-outline" size={48} color={themeColors.text.secondary} />
+                    <Text style={[styles.emptyText, { color: themeColors.text.secondary }]}>
+                      {t('events.eventsList.empty')}
+                    </Text>
+                  </View>
+                ) : (
+                  <>
+                    {events.slice(0, eventsToShow).map((event, index) => (
+                      <TouchableOpacity
+                        key={`${event.id}-${index}`}
+                        style={[
+                          styles.eventCard,
+                          { backgroundColor: themeColors.background, borderLeftColor: getEventColor(event.type) }
+                        ]}
+                      >
+                        <View style={styles.eventHeader}>
+                          <View style={styles.eventIconContainer}>
+                            <Ionicons name={getEventIcon(event.type)} size={20} color={getEventColor(event.type)} />
+                          </View>
+                          <View style={styles.eventInfo}>
+                            <Text style={[styles.eventType, { color: themeColors.text.primary }]}>
+                              {translateEventDescription(event, t)}
+                            </Text>
+                            <Text style={[styles.eventTime, { color: themeColors.text.secondary }]}>
+                              {formatTimestamp(event.timestamp)}
+                            </Text>
+                          </View>
+                        </View>
+
+                        {event.duration && (
+                          <View style={styles.eventDuration}>
+                            <Ionicons name="time-outline" size={14} color={themeColors.text.secondary} />
+                            <Text style={[styles.durationText, { color: themeColors.text.secondary }]}>
+                              {formatDurationShort(event.duration)}
+                            </Text>
+                          </View>
+                        )}
+
+                        {/* Electrical Readings - Compact */}
+                        {event.readings && (
+                          <View style={styles.readingsCompact}>
+                            <View style={styles.readingCompactItem}>
+                              <MaterialCommunityIcons name="flash" size={12} color="#42A5F5" />
+                              <Text style={[styles.readingCompactValue, { color: themeColors.text.secondary }]}>
+                                {formatVoltage(event.readings.voltage)}
+                              </Text>
+                            </View>
+
+                            <View style={styles.readingCompactItem}>
+                              <MaterialCommunityIcons name="current-ac" size={12} color="#FFA726" />
+                              <Text style={[styles.readingCompactValue, { color: themeColors.text.secondary }]}>
+                                {formatCurrent(event.readings.current)}
+                              </Text>
+                            </View>
+
+                            <View style={styles.readingCompactItem}>
+                              <MaterialCommunityIcons name="waveform" size={12} color="#26C6DA" />
+                              <Text style={[styles.readingCompactValue, { color: themeColors.text.secondary }]}>
+                                {formatFrequency(event.readings.frequency)}
+                              </Text>
+                            </View>
+
+                            <View style={styles.readingCompactItem}>
+                              <MaterialCommunityIcons name="sine-wave" size={12} color="#AB47BC" />
+                              <Text style={[styles.readingCompactValue, { color: themeColors.text.secondary }]}>
+                                {formatPowerFactor(event.readings.powerFactor)}
+                              </Text>
+                            </View>
+
+                            <View style={styles.readingCompactItem}>
+                              <MaterialCommunityIcons name="lightning-bolt" size={12} color="#66BB6A" />
+                              <Text style={[styles.readingCompactValue, { color: themeColors.text.secondary }]}>
+                                {formatEnergy(event.readings.energy)}
+                              </Text>
+                            </View>
+                          </View>
+                        )}
+                      </TouchableOpacity>
+                    ))}
+
+                    {eventsToShow < events.length && (
+                      <TouchableOpacity
+                        style={[styles.loadMoreButton, { backgroundColor: themeColors.primary }]}
+                        onPress={loadMoreEvents}
+                      >
+                        <Text style={styles.loadMoreText}>
+                          {t('events.loadMore', { showing: eventsToShow, total: events.length })}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </>
+                )}
+              </Card>
+            </>
+          )}
+        </ScrollView>
+
+        {/* Date Range Modal */}
+        {showDateRangeModal && (
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalCard, { backgroundColor: themeColors.surface }]}>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { color: themeColors.text.primary }]}>
+                  {t('events.dateFilter.title')}
+                </Text>
+                <TouchableOpacity onPress={() => {
+                  handleCancelFilters();
+                }}>
+                  <Ionicons name="close" size={24} color={themeColors.text.secondary} />
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity onPress={closeDateRangeModal}>
-                <Ionicons name="close" size={24} color={themeColors.text.secondary} />
-              </TouchableOpacity>
-            </View>
 
-            {/* Quick Presets */}
-            <View style={styles.quickPresetsContainer}>
-              <TouchableOpacity
-                onPress={() => {
-                  const today = new Date();
-                  setConsumptionStartDate(today);
-                  setConsumptionEndDate(today);
-                }}
-                style={[styles.presetButton, { backgroundColor: themeColors.background, borderColor: themeColors.primary }]}
-              >
-                <Ionicons name="today-outline" size={16} color={themeColors.primary} />
-                <Text style={[styles.presetButtonText, { color: themeColors.text.primary }]}>
-                  {t('events.consumption.datePresets.today')}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => {
-                  const yesterday = new Date();
-                  yesterday.setDate(yesterday.getDate() - 1);
-                  setConsumptionStartDate(yesterday);
-                  setConsumptionEndDate(yesterday);
-                }}
-                style={[styles.presetButton, { backgroundColor: themeColors.background, borderColor: themeColors.primary }]}
-              >
-                <Text style={[styles.presetButtonText, { color: themeColors.text.primary }]}>
-                  {t('events.consumption.datePresets.yesterday')}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => {
-                  const today = new Date();
-                  const oneWeekAgo = new Date();
-                  oneWeekAgo.setDate(oneWeekAgo.getDate() - 6);
-                  setConsumptionStartDate(oneWeekAgo);
-                  setConsumptionEndDate(today);
-                }}
-                style={[styles.presetButton, { backgroundColor: themeColors.background, borderColor: themeColors.primary }]}
-              >
-                <Text style={[styles.presetButtonText, { color: themeColors.text.primary }]}>
-                  {t('events.presets.lastWeek')}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => {
-                  const today = new Date();
-                  const oneMonthAgo = new Date();
-                  oneMonthAgo.setDate(oneMonthAgo.getDate() - 29);
-                  setConsumptionStartDate(oneMonthAgo);
-                  setConsumptionEndDate(today);
-                }}
-                style={[styles.presetButton, { backgroundColor: themeColors.background, borderColor: themeColors.primary }]}
-              >
-                <Text style={[styles.presetButtonText, { color: themeColors.text.primary }]}>
-                  {t('events.presets.lastMonth')}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Custom Date Selection */}
-            <View style={styles.customDateSection}>
-              <Text style={[styles.customDateLabel, { color: themeColors.text.secondary }]}>
-                {t('events.consumption.datePresets.customRange')}
-              </Text>
-
-              <View style={styles.datePickerRow}>
-                <View style={styles.datePickerColumn}>
-                  <Text style={[styles.datePickerLabel, { color: themeColors.text.secondary }]}>
-                    {t('common.from')}
+              <View style={styles.modalContent}>
+                {/* Start Date Picker */}
+                <View style={styles.pickerRow}>
+                  <Text style={[styles.pickerLabel, { color: themeColors.text.secondary }]}>
+                    {t('events.dateFilter.from')}
                   </Text>
                   <TouchableOpacity
+                    style={[styles.dateButton, { backgroundColor: themeColors.background, borderColor: themeColors.border }]}
                     onPress={() => setShowConsumptionStartPicker(true)}
-                    style={[styles.datePickerButton, { backgroundColor: themeColors.background, borderColor: themeColors.primary }]}
                   >
-                    <Ionicons name="calendar-outline" size={18} color={themeColors.primary} />
-                    <Text style={[styles.datePickerText, { color: themeColors.text.primary }]}>
-                      {formatDateLabel(consumptionStartDate)}
+                    <Text style={[styles.dateButtonText, { color: themeColors.text.primary }]}>
+                      {formatDateLabel(pendingStartDate)}
                     </Text>
+                    <Ionicons name="calendar-outline" size={20} color={themeColors.primary} />
                   </TouchableOpacity>
                 </View>
 
-                <Ionicons name="arrow-forward" size={20} color={themeColors.text.secondary} style={styles.dateArrow} />
+                {showConsumptionStartPicker && (
+                  <DateTimePicker
+                    value={pendingStartDate}
+                    mode="date"
+                    display="default"
+                    onChange={onConsumptionStartDateChange}
+                    maximumDate={new Date()}
+                  />
+                )}
 
-                <View style={styles.datePickerColumn}>
-                  <Text style={[styles.datePickerLabel, { color: themeColors.text.secondary }]}>
-                    {t('common.to')}
+                {/* End Date Picker */}
+                <View style={styles.pickerRow}>
+                  <Text style={[styles.pickerLabel, { color: themeColors.text.secondary }]}>
+                    {t('events.dateFilter.to')}
                   </Text>
                   <TouchableOpacity
+                    style={[styles.dateButton, { backgroundColor: themeColors.background, borderColor: themeColors.border }]}
                     onPress={() => setShowConsumptionEndPicker(true)}
-                    style={[styles.datePickerButton, { backgroundColor: themeColors.background, borderColor: themeColors.primary }]}
                   >
-                    <Ionicons name="calendar-outline" size={18} color={themeColors.primary} />
-                    <Text style={[styles.datePickerText, { color: themeColors.text.primary }]}>
-                      {formatDateLabel(consumptionEndDate)}
+                    <Text style={[styles.dateButtonText, { color: themeColors.text.primary }]}>
+                      {formatDateLabel(pendingEndDate)}
                     </Text>
+                    <Ionicons name="calendar-outline" size={20} color={themeColors.primary} />
                   </TouchableOpacity>
                 </View>
+
+                {showConsumptionEndPicker && (
+                  <DateTimePicker
+                    value={pendingEndDate}
+                    mode="date"
+                    display="default"
+                    onChange={onConsumptionEndDateChange}
+                    minimumDate={pendingStartDate}
+                    maximumDate={new Date()}
+                  />
+                )}
+              </View>
+
+              {/* Apply/Cancel Buttons */}
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={[styles.cancelButton, { backgroundColor: themeColors.background }]}
+                  onPress={handleCancelFilters}
+                >
+                  <Text style={[styles.cancelButtonText, { color: themeColors.text.secondary }]}>
+                    {t('common.cancel')}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.applyButton, { backgroundColor: themeColors.primary }]}
+                  onPress={handleApplyFilters}
+                  disabled={!hasPendingChanges}
+                >
+                  <Text style={[styles.applyButtonText, { opacity: hasPendingChanges ? 1 : 0.5 }]}>
+                    {t('common.apply')}
+                  </Text>
+                </TouchableOpacity>
               </View>
             </View>
-
-            {/* Apply Button */}
-            <TouchableOpacity
-              onPress={closeDateRangeModal}
-              style={[styles.applyFilterButton, { backgroundColor: themeColors.primary }]}
-            >
-              <Text style={styles.applyFilterText}>{t('common.apply')}</Text>
-            </TouchableOpacity>
           </View>
-        </View>
-      )}
+        )}
 
-      {/* Hour Range Modal */}
-      {showHourRangeModal && (
-        <View style={styles.modalOverlay}>
-          <View style={[styles.filterModal, { backgroundColor: themeColors.surface }]}>
-            <View style={styles.filterModalHeader}>
-              <View style={styles.modalTitleRow}>
-                <Ionicons name="time" size={24} color={themeColors.info} />
-                <Text style={[styles.filterModalTitle, { color: themeColors.text.primary }]}>
+        {/* Hour Range Modal */}
+        {showHourRangeModal && (
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalCard, { backgroundColor: themeColors.surface }]}>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { color: themeColors.text.primary }]}>
                   {t('events.consumption.hourRange')}
                 </Text>
-              </View>
-              <TouchableOpacity onPress={closeHourRangeModal}>
-                <Ionicons name="close" size={24} color={themeColors.text.secondary} />
-              </TouchableOpacity>
-            </View>
-
-            {/* Today Indicator */}
-            {(() => {
-              const today = new Date();
-              const isToday = consumptionStartDate.toDateString() === today.toDateString() &&
-                             consumptionEndDate.toDateString() === today.toDateString();
-
-              if (isToday) {
-                return (
-                  <View style={[styles.todayIndicator, { backgroundColor: themeColors.success + '20', borderColor: themeColors.success }]}>
-                    <Ionicons name="sunny" size={18} color={themeColors.success} />
-                    <View>
-                      <Text style={[styles.todayIndicatorTitle, { color: themeColors.success }]}>
-                        {t('events.consumption.todayIndicator.title')}
-                      </Text>
-                      <Text style={[styles.todayIndicatorSubtitle, { color: themeColors.text.secondary }]}>
-                        {t('events.consumption.todayIndicator.currentHour', { hour: currentHour.toString().padStart(2, '0') })}
-                      </Text>
-                    </View>
-                  </View>
-                );
-              }
-              return null;
-            })()}
-
-            {/* Quick Presets */}
-            <View style={styles.hourPresetsContainer}>
-              <TouchableOpacity
-                onPress={() => {
-                  setPendingStartHour(0);
-                  setPendingEndHour(23);
-                  setHasPendingChanges(true);
-                }}
-                style={[styles.hourPresetButton, { backgroundColor: themeColors.background, borderColor: themeColors.info }]}
-              >
-                <Text style={[styles.hourPresetText, { color: themeColors.text.primary }]}>
-                  {t('events.consumption.hourPresets.fullDay')}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => {
-                  setPendingStartHour(6);
-                  setPendingEndHour(18);
-                  setHasPendingChanges(true);
-                }}
-                style={[styles.hourPresetButton, { backgroundColor: themeColors.background, borderColor: themeColors.info }]}
-              >
-                <Ionicons name="sunny-outline" size={14} color={themeColors.info} />
-                <Text style={[styles.hourPresetText, { color: themeColors.text.primary }]}>
-                  {t('events.consumption.hourPresets.daytime')}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => {
-                  setPendingStartHour(18);
-                  setPendingEndHour(23);
-                  setHasPendingChanges(true);
-                }}
-                style={[styles.hourPresetButton, { backgroundColor: themeColors.background, borderColor: themeColors.info }]}
-              >
-                <Ionicons name="moon-outline" size={14} color={themeColors.info} />
-                <Text style={[styles.hourPresetText, { color: themeColors.text.primary }]}>
-                  {t('events.consumption.hourPresets.evening')}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => {
-                  const now = new Date().getHours();
-                  setPendingStartHour(Math.max(0, now - 3));
-                  setPendingEndHour(now);
-                  setHasPendingChanges(true);
-                }}
-                style={[styles.hourPresetButton, { backgroundColor: themeColors.background, borderColor: themeColors.info }]}
-              >
-                <Ionicons name="time-outline" size={14} color={themeColors.info} />
-                <Text style={[styles.hourPresetText, { color: themeColors.text.primary }]}>
-                  {t('events.consumption.hourPresets.last3Hours')}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Start Hour */}
-            <View style={styles.filterSection}>
-              <Text style={[styles.filterSectionLabel, { color: themeColors.text.primary }]}>
-                {t('common.from')}
-              </Text>
-              <View style={styles.hourPickerRowCentered}>
-                <TouchableOpacity
-                  onPress={() => {
-                    setPendingStartHour(Math.max(0, pendingStartHour - 1));
-                    setHasPendingChanges(true);
-                  }}
-                  style={[styles.hourButton, { backgroundColor: themeColors.background, borderColor: themeColors.info }]}
-                >
-                  <Ionicons name="remove" size={22} color={themeColors.info} />
+                <TouchableOpacity onPress={() => {
+                  handleCancelFilters();
+                }}>
+                  <Ionicons name="close" size={24} color={themeColors.text.secondary} />
                 </TouchableOpacity>
-                <View style={[styles.hourDisplay, { backgroundColor: themeColors.background, borderColor: themeColors.info }]}>
-                  <Text style={[styles.hourDisplayText, { color: themeColors.text.primary }]}>
-                    {pendingStartHour.toString().padStart(2, '0')}:00
+              </View>
+
+              <View style={styles.modalContent}>
+                {/* Start Hour Picker */}
+                <View style={styles.pickerRow}>
+                  <Text style={[styles.pickerLabel, { color: themeColors.text.secondary }]}>
+                    {t('common.from')}
                   </Text>
+                  <ScrollView style={[styles.hourPickerContainer, { backgroundColor: themeColors.background, borderColor: themeColors.border }]} nestedScrollEnabled={true}>
+                    {[...Array(24)].map((_, hour) => (
+                      <TouchableOpacity
+                        key={`start-${hour}`}
+                        style={[
+                          styles.hourOption,
+                          pendingStartHour === hour && { backgroundColor: themeColors.primary }
+                        ]}
+                        onPress={() => handleStartHourChange(hour)}
+                      >
+                        <Text style={[
+                          styles.hourText,
+                          { color: pendingStartHour === hour ? '#FFFFFF' : themeColors.text.primary }
+                        ]}>
+                          {hour.toString().padStart(2, '0')}:00
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
                 </View>
-                <TouchableOpacity
-                  onPress={() => {
-                    setPendingStartHour(Math.min(pendingEndHour, pendingStartHour + 1));
-                    setHasPendingChanges(true);
-                  }}
-                  style={[styles.hourButton, { backgroundColor: themeColors.background, borderColor: themeColors.info }]}
-                >
-                  <Ionicons name="add" size={22} color={themeColors.info} />
-                </TouchableOpacity>
-              </View>
-            </View>
 
-            {/* End Hour */}
-            <View style={styles.filterSection}>
-              <Text style={[styles.filterSectionLabel, { color: themeColors.text.primary }]}>
-                {t('common.to')}
-              </Text>
-              <View style={styles.hourPickerRowCentered}>
-                <TouchableOpacity
-                  onPress={() => {
-                    setPendingEndHour(Math.max(pendingStartHour, pendingEndHour - 1));
-                    setHasPendingChanges(true);
-                  }}
-                  style={[styles.hourButton, { backgroundColor: themeColors.background, borderColor: themeColors.info }]}
-                >
-                  <Ionicons name="remove" size={22} color={themeColors.info} />
-                </TouchableOpacity>
-                <View style={[styles.hourDisplay, { backgroundColor: themeColors.background, borderColor: themeColors.info }]}>
-                  <Text style={[styles.hourDisplayText, { color: themeColors.text.primary }]}>
-                    {pendingEndHour.toString().padStart(2, '0')}:00
+                {/* End Hour Picker */}
+                <View style={styles.pickerRow}>
+                  <Text style={[styles.pickerLabel, { color: themeColors.text.secondary }]}>
+                    {t('common.to')}
                   </Text>
+                  <ScrollView style={[styles.hourPickerContainer, { backgroundColor: themeColors.background, borderColor: themeColors.border }]} nestedScrollEnabled={true}>
+                    {[...Array(24)].map((_, hour) => (
+                      <TouchableOpacity
+                        key={`end-${hour}`}
+                        style={[
+                          styles.hourOption,
+                          pendingEndHour === hour && { backgroundColor: themeColors.primary }
+                        ]}
+                        onPress={() => handleEndHourChange(hour)}
+                      >
+                        <Text style={[
+                          styles.hourText,
+                          { color: pendingEndHour === hour ? '#FFFFFF' : themeColors.text.primary }
+                        ]}>
+                          {hour.toString().padStart(2, '0')}:00
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
                 </View>
+              </View>
+
+              {/* Apply/Cancel Buttons */}
+              <View style={styles.modalActions}>
                 <TouchableOpacity
-                  onPress={() => {
-                    setPendingEndHour(Math.min(23, pendingEndHour + 1));
-                    setHasPendingChanges(true);
-                  }}
-                  style={[styles.hourButton, { backgroundColor: themeColors.background, borderColor: themeColors.info }]}
+                  style={[styles.cancelButton, { backgroundColor: themeColors.background }]}
+                  onPress={handleCancelFilters}
                 >
-                  <Ionicons name="add" size={22} color={themeColors.info} />
+                  <Text style={[styles.cancelButtonText, { color: themeColors.text.secondary }]}>
+                    {t('common.cancel')}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.applyButton, { backgroundColor: themeColors.primary }]}
+                  onPress={handleApplyFilters}
+                  disabled={!hasPendingChanges}
+                >
+                  <Text style={[styles.applyButtonText, { opacity: hasPendingChanges ? 1 : 0.5 }]}>
+                    {t('common.apply')}
+                  </Text>
                 </TouchableOpacity>
               </View>
-            <Text style={[styles.chartSubtitle, { textAlign: 'center', color: themeColors.text.secondary }]}>
-              {Math.max(0, pendingEndHour - pendingStartHour + 1)} {t('events.consumption.hours')}
-            </Text>
-
-            {/* Apply/Cancel Buttons */}
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                onPress={handleCancelFilters}
-                style={[styles.modalButton, styles.cancelButton, { backgroundColor: themeColors.background, borderColor: themeColors.border }]}
-              >
-                <Text style={[styles.cancelButtonText, { color: themeColors.text.secondary }]}>
-                  {t('common.cancel')}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleApplyFilters}
-                style={[styles.modalButton, styles.applyButton, { backgroundColor: themeColors.primary }]}
-              >
-                <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
-                <Text style={styles.applyButtonText}>
-                  {t('common.apply')}
-                </Text>
-              </TouchableOpacity>
             </View>
-
-            </View>
-
-            {/* Apply Button */}
-            <TouchableOpacity
-              onPress={closeHourRangeModal}
-              style={[styles.applyFilterButton, { backgroundColor: themeColors.info }]}
-            >
-              <Text style={styles.applyFilterText}>{t('common.apply')}</Text>
-            </TouchableOpacity>
           </View>
-        </View>
-      )}
+        )}
 
-      {/* Date Pickers */}
-      {showConsumptionStartPicker && (
-        <DateTimePicker
-          value={pendingStartDate}
-          mode="date"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={onConsumptionStartDateChange}
-          maximumDate={pendingEndDate}
-        />
-      )}
+        {/* Event Filter Modal */}
+        {showEventFilterModal && (
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalCard, { backgroundColor: themeColors.surface }]}>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { color: themeColors.text.primary }]}>
+                  {t('events.dateFilter.title')}
+                </Text>
+                <TouchableOpacity onPress={handleCancelEventFilters}>
+                  <Ionicons name="close" size={24} color={themeColors.text.secondary} />
+                </TouchableOpacity>
+              </View>
 
-      {showConsumptionEndPicker && (
-        <DateTimePicker
-          value={pendingEndDate}
-          mode="date"
-          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={onConsumptionEndDateChange}
-          minimumDate={pendingStartDate}
-          maximumDate={new Date()}
-        />
-      )}
+              <View style={styles.modalContent}>
+                {/* Start Date Picker */}
+                <View style={styles.pickerRow}>
+                  <Text style={[styles.pickerLabel, { color: themeColors.text.secondary }]}>
+                    {t('events.dateFilter.from')}
+                  </Text>
+                  <TouchableOpacity
+                    style={[styles.dateButton, { backgroundColor: themeColors.background, borderColor: themeColors.border }]}
+                    onPress={() => setShowStartPicker(true)}
+                  >
+                    <Text style={[styles.dateButtonText, { color: themeColors.text.primary }]}>
+                      {formatDateLabel(pendingEventStartDate)}
+                    </Text>
+                    <Ionicons name="calendar-outline" size={20} color={themeColors.primary} />
+                  </TouchableOpacity>
+                </View>
+
+                {showStartPicker && (
+                  <DateTimePicker
+                    value={pendingEventStartDate}
+                    mode="date"
+                    display="default"
+                    onChange={onStartDateChange}
+                    maximumDate={new Date()}
+                  />
+                )}
+
+                {/* End Date Picker */}
+                <View style={styles.pickerRow}>
+                  <Text style={[styles.pickerLabel, { color: themeColors.text.secondary }]}>
+                    {t('events.dateFilter.to')}
+                  </Text>
+                  <TouchableOpacity
+                    style={[styles.dateButton, { backgroundColor: themeColors.background, borderColor: themeColors.border }]}
+                    onPress={() => setShowEndPicker(true)}
+                  >
+                    <Text style={[styles.dateButtonText, { color: themeColors.text.primary }]}>
+                      {formatDateLabel(pendingEventEndDate)}
+                    </Text>
+                    <Ionicons name="calendar-outline" size={20} color={themeColors.primary} />
+                  </TouchableOpacity>
+                </View>
+
+                {showEndPicker && (
+                  <DateTimePicker
+                    value={pendingEventEndDate}
+                    mode="date"
+                    display="default"
+                    onChange={onEndDateChange}
+                    minimumDate={pendingEventStartDate}
+                    maximumDate={new Date()}
+                  />
+                )}
+              </View>
+
+              {/* Apply/Cancel Buttons */}
+              <View style={styles.modalActions}>
+                <TouchableOpacity
+                  style={[styles.cancelButton, { backgroundColor: themeColors.background }]}
+                  onPress={handleCancelEventFilters}
+                >
+                  <Text style={[styles.cancelButtonText, { color: themeColors.text.secondary }]}>
+                    {t('common.cancel')}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.applyButton, { backgroundColor: themeColors.primary }]}
+                  onPress={handleApplyEventFilters}
+                  disabled={!hasEventPendingChanges}
+                >
+                  <Text style={[styles.applyButtonText, { opacity: hasEventPendingChanges ? 1 : 0.5 }]}>
+                    {t('common.apply')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        )}
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
   container: {
     flex: 1,
   },
-  header: {
-    padding: spacing.md,
-    paddingBottom: 0,
-    borderBottomWidth: 1,
-  },
-  headerTitle: {
-    ...typography.h2,
-    marginBottom: spacing.md,
+  loadingText: {
+    textAlign: 'center',
+    marginTop: 20,
+    fontSize: 16,
   },
   tabContainer: {
     flexDirection: 'row',
+    padding: spacing.sm,
+    marginHorizontal: spacing.md,
     marginTop: spacing.sm,
-    gap: spacing.sm,
+    marginBottom: spacing.sm,
+    borderRadius: borderRadius.large,
   },
-  tabButton: {
+  tab: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     borderRadius: borderRadius.medium,
-    gap: spacing.xs,
+    alignItems: 'center',
   },
-  activeTabButton: {
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
+  activeTab: {
+    // backgroundColor set dynamically
   },
   tabText: {
-    ...typography.bodySmall,
+    fontSize: 14,
     fontWeight: '600',
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: spacing.md,
-    paddingBottom: spacing.xxl + spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.xl,
   },
-  sectionTitle: {
-    ...typography.h4,
-    marginBottom: spacing.md,
-  },
-  // Consumption Styles
   consumptionCard: {
-    marginBottom: spacing.md,
+    borderRadius: borderRadius.xlarge,
     padding: spacing.lg,
+    marginBottom: spacing.md,
+    ...shadows.medium,
   },
   consumptionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     marginBottom: spacing.md,
   },
   consumptionTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: spacing.md,
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    marginTop: spacing.xs,
+    marginBottom: spacing.md,
+  },
+  filterButtonsRow: {
+    flexDirection: 'column',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
   },
   filterButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.medium,
-  },
-  filterButtonText: {
-    ...typography.bodySmall,
-    fontWeight: '600',
-  },
-  activeFilterBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.small,
-    marginBottom: spacing.md,
-  },
-  activeFilterText: {
-    ...typography.caption,
-    fontSize: 11,
-  },
-  viewSelectorScroll: {
-    marginBottom: spacing.md,
-  },
-  viewSelector: {
-    flexDirection: 'row',
-  },
-  viewButton: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.large,
-    borderWidth: 1,
-    marginRight: spacing.sm,
-  },
-  viewButtonText: {
-    ...typography.bodySmall,
-    fontWeight: '600',
-  },
-  consumptionDateRange: {
-    marginBottom: spacing.md,
     padding: spacing.md,
-    backgroundColor: 'rgba(66, 165, 245, 0.05)',
     borderRadius: borderRadius.medium,
+    gap: spacing.sm,
   },
-  dateRangeSectionLabel: {
-    ...typography.caption,
-    fontWeight: '600',
-    marginBottom: spacing.sm,
-  },
-  consumptionDateRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  consumptionDateItem: {
+  filterButtonContent: {
     flex: 1,
-    marginRight: spacing.xs,
+    minWidth: 0,
   },
-  consumptionDateLabel: {
-    ...typography.caption,
+  filterButtonLabel: {
     fontSize: 10,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
     marginBottom: 4,
   },
-  consumptionDateButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.sm,
-    borderRadius: borderRadius.small,
-    borderWidth: 1,
+  filterButtonValue: {
+    fontSize: 13,
+    fontWeight: '600',
   },
-  consumptionDateText: {
-    ...typography.caption,
+  presetLabel: {
     fontSize: 11,
-    marginLeft: spacing.xs,
     fontWeight: '600',
-  },
-  currentEnergyCard: {
-    borderRadius: borderRadius.large,
-    padding: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  currentEnergyContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  currentEnergyLeft: {
-    flex: 1,
-  },
-  currentEnergyLabel: {
-    ...typography.bodySmall,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
     marginBottom: spacing.xs,
+    marginTop: spacing.xs,
   },
-  currentEnergyValue: {
-    ...typography.h1,
-    fontWeight: 'bold',
-    marginBottom: spacing.xs,
-  },
-  currentEnergyDateRange: {
-    ...typography.caption,
-    fontSize: 10,
-  },
-  energyIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: borderRadius.round,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  chartContainer: {
-    marginBottom: spacing.lg,
-  },
-  chartTitle: {
-    ...typography.h4,
-    marginBottom: spacing.xs,
-  },
-  chartSubtitle: {
-    ...typography.caption,
-    fontSize: 11,
-    marginBottom: spacing.md,
-  },
-  barChart: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    height: 120,
-    paddingVertical: spacing.sm,
-  },
-  barColumn: {
-    width: 50,
-    alignItems: 'center',
-    marginRight: spacing.xs,
-  },
-  barContainer: {
-    width: '80%',
-    height: 80,
-    justifyContent: 'flex-end',
-    marginBottom: spacing.xs,
-  },
-  bar: {
-    width: '100%',
-    borderTopLeftRadius: borderRadius.small,
-    borderTopRightRadius: borderRadius.small,
-    minHeight: 4,
-  },
-  barLabel: {
-    ...typography.caption,
-    fontSize: 10,
-    marginBottom: 2,
-  },
-  barValue: {
-    ...typography.caption,
-    fontSize: 9,
-    fontWeight: '600',
-  },
-  consumptionStatsRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: spacing.md,
-  },
-  consumptionStatItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  consumptionStatIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: borderRadius.round,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.sm,
-  },
-  consumptionStatValue: {
-    ...typography.h4,
-    fontWeight: 'bold',
-  },
-  consumptionStatLabel: {
-    ...typography.caption,
-  },
-  // Date Range Picker Styles
-  dateRangeCard: {
-    marginBottom: spacing.md,
-    padding: spacing.lg,
-  },
-  dateRangeHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  dateRangeTitle: {
-    ...typography.h4,
-    marginLeft: spacing.sm,
-  },
-  dateRangeRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  dateRangeItem: {
-    flex: 1,
-    marginRight: spacing.sm,
-  },
-  dateRangeLabel: {
-    ...typography.caption,
-    marginBottom: spacing.xs,
-    fontWeight: '600',
-  },
-  dateButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.md,
-    borderRadius: borderRadius.medium,
-    borderWidth: 1,
-  },
-  dateTextContainer: {
-    marginLeft: spacing.sm,
-    flex: 1,
-  },
-  dateText: {
-    ...typography.bodySmall,
-    fontWeight: '600',
-  },
-  timeText: {
-    ...typography.caption,
-    fontSize: 10,
-  },
-  // Safety Filter Styles
-  safetyCard: {
-    marginBottom: spacing.md,
-    padding: spacing.lg,
-  },
-  safetyHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  safetyTitle: {
-    ...typography.h4,
-    marginLeft: spacing.sm,
-  },
-  safetyFilters: {
+  presetsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-  },
-  safetyFilterChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.large,
-    borderWidth: 1.5,
-    marginRight: spacing.sm,
+    gap: spacing.xs,
     marginBottom: spacing.sm,
   },
-  safetyFilterText: {
-    ...typography.bodySmall,
-    marginLeft: spacing.xs,
+  presetChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: borderRadius.full,
+    minHeight: 32,
+  },
+  presetChipText: {
+    fontSize: 12,
     fontWeight: '600',
   },
-  clearFiltersButton: {
-    marginTop: spacing.sm,
-    alignSelf: 'flex-start',
-  },
-  clearFiltersText: {
-    ...typography.bodySmall,
-    fontWeight: '600',
-  },
-  // Stats Styles
-  statsCard: {
+  energyStatsGrid: {
+    flexDirection: 'row',
+    gap: spacing.sm,
     marginBottom: spacing.md,
+  },
+  energyStatCard: {
+    flex: 1,
+    alignItems: 'center',
+    padding: spacing.md,
+    borderRadius: borderRadius.large,
+    minHeight: 120,
+    justifyContent: 'center',
+  },
+  energyStatValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginVertical: spacing.xs,
+  },
+  energyStatLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    textAlign: 'center',
+  },
+  chartContainer: {
+    marginTop: spacing.sm,
+  },
+  trendsCard: {
+    borderRadius: borderRadius.xlarge,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+    ...shadows.medium,
+  },
+  trendsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  chartWrapper: {
+    marginTop: spacing.lg,
+  },
+  chartTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  chartTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: spacing.sm,
   },
   statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
+    marginBottom: spacing.sm,
   },
-  statItem: {
+  statBox: {
     alignItems: 'center',
-  },
-  statValue: {
-    ...typography.h2,
-    fontWeight: 'bold',
   },
   statLabel: {
-    ...typography.caption,
-    marginTop: spacing.xs,
+    fontSize: 10,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
   },
-  // Event Styles
-  eventsSection: {
-    marginTop: spacing.md,
+  statValue: {
+    fontSize: 14,
+    fontWeight: 'bold',
   },
-  eventCard: {
-    borderRadius: borderRadius.medium,
-    padding: spacing.md,
+  statsCard: {
+    borderRadius: borderRadius.xlarge,
+    padding: spacing.lg,
     marginBottom: spacing.md,
-    borderLeftWidth: 4,
+    ...shadows.medium,
   },
-  eventHeader: {
+  statsGrid: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    justifyContent: 'space-between',
   },
-  eventIconContainer: {
-    marginRight: spacing.md,
-  },
-  eventIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  eventContent: {
+  statCard: {
     flex: 1,
+    alignItems: 'center',
+    padding: spacing.md,
   },
-  eventDescription: {
-    ...typography.body,
-    fontWeight: '600',
-    marginBottom: spacing.xs,
+  statNumber: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginVertical: spacing.xs,
   },
-  eventTime: {
-    ...typography.caption,
+  statDescription: {
+    fontSize: 12,
+    textAlign: 'center',
   },
-  eventDetails: {
-    flexDirection: 'row',
-    marginTop: spacing.md,
-  },
-  eventDetailItem: {
+  filterChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: spacing.md,
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.full,
+    marginBottom: spacing.md,
+    ...shadows.small,
   },
-  eventDetailText: {
-    ...typography.caption,
+  filterChipText: {
     marginLeft: spacing.xs,
-  },
-  durationBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: spacing.sm,
-  },
-  durationText: {
-    ...typography.caption,
+    fontSize: 14,
     fontWeight: '600',
-    marginLeft: spacing.xs,
+  },
+  eventsCard: {
+    borderRadius: borderRadius.xlarge,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+    ...shadows.medium,
   },
   emptyState: {
     alignItems: 'center',
     paddingVertical: spacing.xxl,
   },
   emptyText: {
-    ...typography.body,
+    marginTop: spacing.md,
+    fontSize: 14,
+  },
+  eventCard: {
+    borderLeftWidth: 4,
+    borderRadius: borderRadius.medium,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+    ...shadows.small,
+  },
+  eventHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  eventIconContainer: {
+    marginRight: spacing.sm,
+  },
+  eventInfo: {
+    flex: 1,
+  },
+  eventType: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  eventTime: {
+    fontSize: 12,
+  },
+  eventDuration: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.sm,
+    gap: spacing.xs,
+  },
+  durationText: {
+    fontSize: 12,
+  },
+  readingsCompact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.sm,
+    gap: spacing.md,
+    flexWrap: 'wrap',
+  },
+  readingCompactItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  readingCompactValue: {
+    fontSize: 10,
+    fontWeight: '500',
+  },
+  loadMoreButton: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.full,
+    alignItems: 'center',
     marginTop: spacing.md,
   },
-  // Graph Styles
-  graphsSection: {
-    marginBottom: spacing.md,
+  loadMoreText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
-  sectionSubtitle: {
-    ...typography.bodySmall,
-    marginTop: -spacing.sm,
-    marginBottom: spacing.md,
-  },
-  graphCard: {
-    marginBottom: spacing.md,
-    padding: spacing.md,
-  },
-  graphHeader: {
-    marginBottom: spacing.md,
-  },
-  graphTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  graphTitle: {
-    ...typography.h4,
-    marginLeft: spacing.sm,
-  },
-  graphStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginTop: spacing.sm,
-  },
-  graphStat: {
+  modalOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  graphStatLabel: {
-    ...typography.caption,
-    fontSize: 10,
+  modalCard: {
+    width: '90%',
+    maxWidth: 400,
+    borderRadius: borderRadius.xlarge,
+    padding: spacing.lg,
+    ...shadows.large,
   },
-  graphStatValue: {
-    ...typography.h4,
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  modalTitle: {
+    fontSize: 18,
     fontWeight: 'bold',
-    marginTop: 2,
   },
-  chart: {
-    marginVertical: spacing.sm,
+  modalContent: {
+    marginBottom: spacing.md,
+  },
+  pickerRow: {
+    marginBottom: spacing.md,
+  },
+  pickerLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: spacing.xs,
+  },
+  dateButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: spacing.md,
     borderRadius: borderRadius.medium,
+    borderWidth: 1,
   },
-  safetyRange: {
+  dateButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  hourPickerContainer: {
+    maxHeight: 200,
+    borderRadius: borderRadius.medium,
+    borderWidth: 1,
+    padding: spacing.xs,
+  },
+  hourOption: {
     padding: spacing.sm,
     borderRadius: borderRadius.small,
-    alignItems: 'center',
-    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
   },
-  safetyRangeText: {
-    ...typography.caption,
-    fontSize: 11,
-  },
-  // Filter Buttons Row
-  filterButtonsRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    marginBottom: spacing.md,
-  },
-  filterButtonContent: {
-    flex: 1,
-    gap: spacing.xs,
-  },
-  filterButtonLabel: {
-    ...typography.caption,
-    fontSize: 10,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  filterButtonValue: {
-    ...typography.bodySmall,
+  hourText: {
+    fontSize: 14,
     fontWeight: '600',
-    fontSize: 11,
-  },
-
-  // Filter Modal Styles
-  modalOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.lg,
-  },
-  filterModal: {
-    width: '100%',
-    maxWidth: 400,
-    borderRadius: borderRadius.large,
-    padding: spacing.lg,
-    ...shadows.medium,
-  },
-  filterModalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-  },
-  modalTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  filterModalTitle: {
-    ...typography.h3,
-    fontWeight: 'bold',
-  },
-  filterSection: {
-    marginBottom: spacing.md,
-  },
-  filterSectionLabel: {
-    ...typography.body,
-    fontWeight: '600',
-    marginBottom: spacing.sm,
-  },
-
-  // Quick Presets for Date Range
-  quickPresetsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  presetButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.medium,
-    borderWidth: 1.5,
-    gap: spacing.xs,
-  },
-  presetButtonText: {
-    ...typography.bodySmall,
-    fontWeight: '600',
-  },
-
-  // Custom Date Section
-  customDateSection: {
-    marginBottom: spacing.lg,
-  },
-  customDateLabel: {
-    ...typography.caption,
-    marginBottom: spacing.md,
     textAlign: 'center',
   },
-  datePickerRow: {
+  modalActions: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     gap: spacing.sm,
-  },
-  datePickerColumn: {
-    flex: 1,
-  },
-  datePickerLabel: {
-    ...typography.caption,
-    marginBottom: spacing.xs,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  datePickerButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.sm,
-    borderRadius: borderRadius.medium,
-    borderWidth: 1.5,
-  },
-  datePickerText: {
-    ...typography.bodySmall,
-    fontWeight: '600',
-  },
-  dateArrow: {
-    marginTop: 20,
-  },
-
-  // Today Indicator
-  todayIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    padding: spacing.md,
-    borderRadius: borderRadius.medium,
-    borderWidth: 1.5,
-    marginBottom: spacing.lg,
-  },
-  todayIndicatorTitle: {
-    ...typography.bodySmall,
-    fontWeight: '700',
-  },
-  todayIndicatorSubtitle: {
-    ...typography.caption,
-    marginTop: 2,
-  },
-
-  // Hour Presets
-  hourPresetsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  hourPresetButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    borderRadius: borderRadius.medium,
-    borderWidth: 1.5,
-    gap: spacing.xs,
-  },
-  hourPresetText: {
-    ...typography.caption,
-    fontWeight: '600',
-  },
-  hourPickerRow: {
-    flex: 0.7,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  hourPickerRowCentered: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.md,
-  },
-  hourButton: {
-    width: 48,
-    height: 48,
-    borderRadius: borderRadius.medium,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-  },
-  hourDisplay: {
-    minWidth: 100,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    borderRadius: borderRadius.medium,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-  },
-  hourDisplayText: {
-    ...typography.h3,
-    fontWeight: 'bold',
-    fontSize: 20,
-    fontFamily: 'monospace',
-  },
-  applyFilterButton: {
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.large,
-    alignItems: 'center',
-    marginTop: spacing.md,
-  },
-  applyFilterText: {
-    ...typography.button,
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    marginTop: spacing.lg,
-    paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0, 0, 0, 0.1)',
-  },
-  modalButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.large,
-    gap: spacing.xs,
   },
   cancelButton: {
-    borderWidth: 1.5,
-  },
-  applyButton: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  applyButtonText: {
-    ...typography.button,
-    color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: 15,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.full,
   },
   cancelButtonText: {
-    ...typography.button,
+    fontSize: 14,
     fontWeight: '600',
-    fontSize: 15,
+  },
+  applyButton: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.full,
+  },
+  applyButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

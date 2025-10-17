@@ -11,6 +11,12 @@ export interface ElectricalData {
   reactivePower: number;   // Volt-Amperes Reactive (VAR)
   relayState: boolean;     // ON/OFF
   timestamp: number;       // Unix timestamp
+  // ESP32 status fields (optional - sent by hardware)
+  protectionTriggered?: boolean;  // Is protection currently active?
+  protectionReason?: string;      // Why protection was triggered
+  manualMode?: boolean;           // Was physical button pressed?
+  powerOutage?: boolean;          // Is power supply interrupted?
+  reconnectionPending?: boolean;  // Is auto-reconnect waiting?
 }
 
 export interface ConnectionStatus {

@@ -38,6 +38,10 @@ const MOCK_EVENT_TYPES: EventType[] = [
   'overload',
 ];
 
+// Store session start time and accumulated energy
+let sessionStartTime = Date.now();
+let accumulatedEnergy = 12.45; // Starting value in kWh
+
 /**
  * Generate realistic mock electrical data
  */
@@ -63,8 +67,12 @@ export const generateMockElectricalData = (relayState: boolean = true): Electric
   // Frequency: 50Hz with small fluctuation
   const frequency = 50.0 + (Math.random() - 0.5) * 0.2;
 
-  // Energy: incrementing (this should be managed by store)
-  const energy = 12.45;
+  // Energy: continuously incrementing based on power consumption
+  // Increment energy based on power and time elapsed (called every second)
+  // Power in W, convert to kW and accumulate per hour
+  const energyIncrement = (power / 1000) / 3600; // kWh per second
+  accumulatedEnergy += energyIncrement;
+  const energy = accumulatedEnergy;
 
   return {
     voltage: Math.round(voltage * 10) / 10,
@@ -77,6 +85,12 @@ export const generateMockElectricalData = (relayState: boolean = true): Electric
     reactivePower: Math.round(reactivePower * 10) / 10,
     relayState,
     timestamp: Date.now(),
+    // BUG-001 fix: Add ESP32 status fields to mock data
+    protectionTriggered: false,  // No protection in demo mode
+    protectionReason: '',
+    manualMode: false,
+    powerOutage: false,
+    reconnectionPending: false,
   };
 };
 
@@ -89,7 +103,7 @@ export const generateDefaultSettings = (): Settings => {
       voltage: {
         min: 200,
         max: 240,
-        action: 'alert',
+        action: 'cutoff',  // Always cutoff power when thresholds exceeded
       },
       current: {
         min: 0.5,

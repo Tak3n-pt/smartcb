@@ -313,7 +313,8 @@
       "frequency": {
         "title": "التردد",
         "standard": "القيمة القياسية: 50 هرتز ±0.5 هرتز"
-      }
+      },
+      "waitingForData": "في انتظار المزيد من البيانات..."
     },
     "dateFilter": {
       "title": "نطاق تاريخ الأحداث",
@@ -360,12 +361,26 @@
         "frequencyMin": "أدنى تردد",
         "frequencyMax": "أعلى تردد",
         "powerFactorMin": "معامل قدرة منخفض"
+      },
+      "descriptions": {
+        "manual_on": "تم تشغيل المرحل",
+        "manual_off": "تم إيقاف المرحل",
+        "overvoltage": "جهد مرتفع: {{voltage}} فولت (الحد الأقصى: {{max}} فولت)",
+        "undervoltage": "جهد منخفض: {{voltage}} فولت (الحد الأدنى: {{min}} فولت)",
+        "overload": "حمل زائد: {{current}} أمبير (الحد الأقصى: {{max}} أمبير)",
+        "underload": "تيار منخفض جداً: {{current}} أمبير",
+        "outage": "تم اكتشاف انقطاع في التيار",
+        "restore": "تم استعادة التيار الكهربائي",
+        "frequency_max": "تردد مرتفع: {{frequency}} هرتز (الحد الأقصى: {{max}} هرتز)",
+        "frequency_min": "تردد منخفض: {{frequency}} هرتز (الحد الأدنى: {{min}} هرتز)",
+        "power_factor_min": "معامل قدرة منخفض: {{pf}} (الحد الأدنى: {{min}})"
       }
     },
     "presets": {
       "lastWeek": "الأسبوع الماضي",
       "lastMonth": "الشهر الماضي"
-    }
+    },
+    "loadMore": "تحميل المزيد (عرض {{showing}} من {{total}})"
   },
   "settings": {
     "title": "الإعدادات",
@@ -417,6 +432,7 @@
         "delayUnit": "ثانية",
         "maxAttempts": "الحد الأقصى للمحاولات",
         "enable": "تفعيل إعادة التوصيل التلقائي",
+        "enabled": "تفعيل إعادة التوصيل التلقائي",
         "placeholder": "أدخل التأخير"
       }
     },

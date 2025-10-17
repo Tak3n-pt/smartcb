@@ -92,7 +92,7 @@ export default function WelcomeScreen() {
               >
                 <Ionicons
                   name={feature.icon as any}
-                  size={24}
+                  size={20}
                   color="#FFFFFF"
                 />
               </LinearGradient>
@@ -124,7 +124,7 @@ export default function WelcomeScreen() {
               <Text style={styles.ctaButtonText}>
                 {t('welcome.getStarted')}
               </Text>
-              <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
+              <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
             </LinearGradient>
           </TouchableOpacity>
 
@@ -144,38 +144,39 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.xs,
     justifyContent: 'space-between',
   },
 
   // Hero Section
   hero: {
     alignItems: 'center',
+    paddingTop: spacing.xs,
   },
   logoContainer: {
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
   logoGradient: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#3B82F6',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 6,
   },
   logo: {
-    width: 55,
-    height: 55,
+    width: 42,
+    height: 42,
     tintColor: '#FFFFFF',
   },
   title: {
     ...typography.h1,
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '800',
     textAlign: 'center',
     marginBottom: spacing.xs,
@@ -183,90 +184,91 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     ...typography.body,
-    fontSize: 14,
+    fontSize: 13,
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 18,
     maxWidth: screenWidth - 80,
   },
 
   // Features
   features: {
-    flex: 1,
     justifyContent: 'center',
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   featureCard: {
-    borderRadius: borderRadius.large,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
+    borderRadius: borderRadius.medium,
+    padding: spacing.sm,
+    marginBottom: spacing.xs,
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
   },
   featureIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.md,
+    marginRight: spacing.sm,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.12,
+    shadowRadius: 3,
+    elevation: 2,
   },
   featureContent: {
     flex: 1,
-    paddingTop: 2,
   },
   featureTitle: {
     ...typography.h4,
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
-    marginBottom: 2,
-    letterSpacing: 0.3,
+    marginBottom: 1,
+    letterSpacing: 0.2,
   },
   featureDescription: {
     ...typography.body,
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 11,
+    lineHeight: 15,
   },
 
   // CTA Section
   ctaSection: {
     alignItems: 'center',
+    paddingVertical: spacing.xs,
   },
   ctaButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xl + spacing.md,
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.xl,
     borderRadius: borderRadius.large,
     gap: spacing.sm,
     shadowColor: '#3B82F6',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 5,
     minWidth: screenWidth - (spacing.lg * 2),
   },
   ctaButtonText: {
     ...typography.button,
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '700',
     color: '#FFFFFF',
-    letterSpacing: 0.8,
+    letterSpacing: 0.6,
   },
   footerText: {
     ...typography.bodySmall,
-    fontSize: 12,
+    fontSize: 11,
     marginTop: spacing.sm,
     textAlign: 'center',
+    paddingHorizontal: spacing.md,
+    lineHeight: 15,
   },
 });

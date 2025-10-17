@@ -28,6 +28,63 @@ export default function SettingsScreen() {
   const { t } = useTranslation();
 
   const [activeTab, setActiveTab] = useState<SettingsTab>('thresholds');
+
+  // Inline editing state - simple approach
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState<string>('');
+
+  const startEditing = (field: string, value: number, isDecimal: boolean) => {
+    setEditingField(field);
+    setEditValue(isDecimal ? value.toFixed(isDecimal ? 2 : 1) : value.toString());
+  };
+
+  const cancelEditing = () => {
+    setEditingField(null);
+    setEditValue('');
+  };
+
+  const incrementValue = (isDecimal: boolean, amount: number) => {
+    const current = parseFloat(editValue) || 0;
+    const step = isDecimal ? 0.1 : 1;
+    const newValue = Math.max(0, current + (amount * step));
+    setEditValue(isDecimal ? newValue.toFixed(isDecimal ? 2 : 1) : newValue.toString());
+  };
+
+  const saveValue = () => {
+    if (!editingField) return;
+
+    const value = parseFloat(editValue) || 0;
+
+    switch (editingField) {
+      case 'voltage.max':
+        updateThresholds({ voltage: { ...settings.thresholds.voltage, max: value } });
+        break;
+      case 'voltage.min':
+        updateThresholds({ voltage: { ...settings.thresholds.voltage, min: value } });
+        break;
+      case 'current.max':
+        updateThresholds({ current: { ...settings.thresholds.current, max: value } });
+        break;
+      case 'current.min':
+        updateThresholds({ current: { ...settings.thresholds.current, min: value } });
+        break;
+      case 'frequency.min':
+        updateThresholds({ frequency: { ...settings.thresholds.frequency, min: value } });
+        break;
+      case 'frequency.max':
+        updateThresholds({ frequency: { ...settings.thresholds.frequency, max: value } });
+        break;
+      case 'powerFactor.min':
+        updateThresholds({ powerFactor: { ...settings.thresholds.powerFactor, min: value } });
+        break;
+      case 'reconnection.delay':
+        updateThresholds({ reconnection: { ...settings.reconnection, delay: value } });
+        break;
+    }
+
+    cancelEditing();
+  };
+
   // Lightweight time editing modal state (display-only UX)
   const [timeModal, setTimeModal] = useState<{
     visible: boolean;
@@ -206,58 +263,104 @@ export default function SettingsScreen() {
           <Text style={[styles.label, { color: themeColors.text.secondary }]}>
             {t('settings.thresholds.voltage.max')}
           </Text>
-          <View style={styles.inputContainer}>
-            <TextInput
+          {editingField === 'voltage.max' ? (
+            <View style={styles.inlineEditContainer}>
+              <TouchableOpacity
+                style={styles.inlineButton}
+                onPress={() => incrementValue(false, -1)}
+              >
+                <Ionicons name="remove-circle" size={32} color={themeColors.primary} />
+              </TouchableOpacity>
+              <Text style={[styles.inlineValue, { color: themeColors.text.primary }]}>
+                {editValue} {t('home.units.voltage')}
+              </Text>
+              <TouchableOpacity
+                style={styles.inlineButton}
+                onPress={() => incrementValue(false, 1)}
+              >
+                <Ionicons name="add-circle" size={32} color={themeColors.primary} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.inlineSaveButton, { backgroundColor: themeColors.success }]}
+                onPress={saveValue}
+              >
+                <Ionicons name="checkmark" size={20} color="white" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.inlineCancelButton}
+                onPress={cancelEditing}
+              >
+                <Ionicons name="close" size={20} color={themeColors.text.secondary} />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
               style={[
-                styles.input,
-                {
-                  color: themeColors.text.primary,
-                  backgroundColor: themeColors.background,
-                  borderColor: themeColors.border,
-                },
+                styles.numberChip,
+                { backgroundColor: themeColors.background, borderColor: themeColors.border }
               ]}
-              value={settings.thresholds.voltage.max.toString()}
-              keyboardType="numeric"
-              onChangeText={(text) => {
-                const value = parseInt(text) || settings.thresholds.voltage.max;
-                updateThresholds({
-                  voltage: { ...settings.thresholds.voltage, max: value },
-                });
-              }}
-            />
-            <Text style={[styles.unit, { color: themeColors.text.secondary }]}>
-              {t('home.units.voltage')}
-            </Text>
-          </View>
+              onPress={() => startEditing('voltage.max', settings.thresholds.voltage.max, false)}
+            >
+              <Text style={[styles.numberChipText, { color: themeColors.text.primary }]}>
+                {settings.thresholds.voltage.max}
+              </Text>
+              <Text style={[styles.numberChipUnit, { color: themeColors.text.secondary }]}>
+                {t('home.units.voltage')}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.settingRow}>
           <Text style={[styles.label, { color: themeColors.text.secondary }]}>
             {t('settings.thresholds.voltage.min')}
           </Text>
-          <View style={styles.inputContainer}>
-            <TextInput
+          {editingField === 'voltage.min' ? (
+            <View style={styles.inlineEditContainer}>
+              <TouchableOpacity
+                style={styles.inlineButton}
+                onPress={() => incrementValue(false, -1)}
+              >
+                <Ionicons name="remove-circle" size={32} color={themeColors.primary} />
+              </TouchableOpacity>
+              <Text style={[styles.inlineValue, { color: themeColors.text.primary }]}>
+                {editValue} {t('home.units.voltage')}
+              </Text>
+              <TouchableOpacity
+                style={styles.inlineButton}
+                onPress={() => incrementValue(false, 1)}
+              >
+                <Ionicons name="add-circle" size={32} color={themeColors.primary} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.inlineSaveButton, { backgroundColor: themeColors.success }]}
+                onPress={saveValue}
+              >
+                <Ionicons name="checkmark" size={20} color="white" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.inlineCancelButton}
+                onPress={cancelEditing}
+              >
+                <Ionicons name="close" size={20} color={themeColors.text.secondary} />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
               style={[
-                styles.input,
-                {
-                  color: themeColors.text.primary,
-                  backgroundColor: themeColors.background,
-                  borderColor: themeColors.border,
-                },
+                styles.numberChip,
+                { backgroundColor: themeColors.background, borderColor: themeColors.border }
               ]}
-              value={settings.thresholds.voltage.min.toString()}
-              keyboardType="numeric"
-              onChangeText={(text) => {
-                const value = parseInt(text) || settings.thresholds.voltage.min;
-                updateThresholds({
-                  voltage: { ...settings.thresholds.voltage, min: value },
-                });
-              }}
-            />
-            <Text style={[styles.unit, { color: themeColors.text.secondary }]}>
-              {t('home.units.voltage')}
-            </Text>
-          </View>
+              onPress={() => startEditing('voltage.min', settings.thresholds.voltage.min, false)}
+            >
+              <Text style={[styles.numberChipText, { color: themeColors.text.primary }]}>
+                {settings.thresholds.voltage.min}
+              </Text>
+              <Text style={[styles.numberChipUnit, { color: themeColors.text.secondary }]}>
+                {t('home.units.voltage')}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </Card>
 
@@ -270,58 +373,104 @@ export default function SettingsScreen() {
           <Text style={[styles.label, { color: themeColors.text.secondary }]}>
             {t('settings.thresholds.current.max')}
           </Text>
-          <View style={styles.inputContainer}>
-            <TextInput
+          {editingField === 'current.max' ? (
+            <View style={styles.inlineEditContainer}>
+              <TouchableOpacity
+                style={styles.inlineButton}
+                onPress={() => incrementValue(false, -1)}
+              >
+                <Ionicons name="remove-circle" size={32} color={themeColors.primary} />
+              </TouchableOpacity>
+              <Text style={[styles.inlineValue, { color: themeColors.text.primary }]}>
+                {editValue} {t('home.units.current')}
+              </Text>
+              <TouchableOpacity
+                style={styles.inlineButton}
+                onPress={() => incrementValue(false, 1)}
+              >
+                <Ionicons name="add-circle" size={32} color={themeColors.primary} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.inlineSaveButton, { backgroundColor: themeColors.success }]}
+                onPress={saveValue}
+              >
+                <Ionicons name="checkmark" size={20} color="white" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.inlineCancelButton}
+                onPress={cancelEditing}
+              >
+                <Ionicons name="close" size={20} color={themeColors.text.secondary} />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
               style={[
-                styles.input,
-                {
-                  color: themeColors.text.primary,
-                  backgroundColor: themeColors.background,
-                  borderColor: themeColors.border,
-                },
+                styles.numberChip,
+                { backgroundColor: themeColors.background, borderColor: themeColors.border }
               ]}
-              value={settings.thresholds.current.max.toString()}
-              keyboardType="numeric"
-              onChangeText={(text) => {
-                const value = parseInt(text) || settings.thresholds.current.max;
-                updateThresholds({
-                  current: { ...settings.thresholds.current, max: value },
-                });
-              }}
-            />
-            <Text style={[styles.unit, { color: themeColors.text.secondary }]}>
-              {t('home.units.current')}
-            </Text>
-          </View>
+              onPress={() => startEditing('current.max', settings.thresholds.current.max, false)}
+            >
+              <Text style={[styles.numberChipText, { color: themeColors.text.primary }]}>
+                {settings.thresholds.current.max}
+              </Text>
+              <Text style={[styles.numberChipUnit, { color: themeColors.text.secondary }]}>
+                {t('home.units.current')}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.settingRow}>
           <Text style={[styles.label, { color: themeColors.text.secondary }]}>
             {t('settings.thresholds.current.min')}
           </Text>
-          <View style={styles.inputContainer}>
-            <TextInput
+          {editingField === 'current.min' ? (
+            <View style={styles.inlineEditContainer}>
+              <TouchableOpacity
+                style={styles.inlineButton}
+                onPress={() => incrementValue(true, -1)}
+              >
+                <Ionicons name="remove-circle" size={32} color={themeColors.primary} />
+              </TouchableOpacity>
+              <Text style={[styles.inlineValue, { color: themeColors.text.primary }]}>
+                {editValue} {t('home.units.current')}
+              </Text>
+              <TouchableOpacity
+                style={styles.inlineButton}
+                onPress={() => incrementValue(true, 1)}
+              >
+                <Ionicons name="add-circle" size={32} color={themeColors.primary} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.inlineSaveButton, { backgroundColor: themeColors.success }]}
+                onPress={saveValue}
+              >
+                <Ionicons name="checkmark" size={20} color="white" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.inlineCancelButton}
+                onPress={cancelEditing}
+              >
+                <Ionicons name="close" size={20} color={themeColors.text.secondary} />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
               style={[
-                styles.input,
-                {
-                  color: themeColors.text.primary,
-                  backgroundColor: themeColors.background,
-                  borderColor: themeColors.border,
-                },
+                styles.numberChip,
+                { backgroundColor: themeColors.background, borderColor: themeColors.border }
               ]}
-              value={settings.thresholds.current.min.toString()}
-              keyboardType="numeric"
-              onChangeText={(text) => {
-                const value = parseFloat(text) || settings.thresholds.current.min;
-                updateThresholds({
-                  current: { ...settings.thresholds.current, min: value },
-                });
-              }}
-            />
-            <Text style={[styles.unit, { color: themeColors.text.secondary }]}>
-              {t('home.units.current')}
-            </Text>
-          </View>
+              onPress={() => startEditing('current.min', settings.thresholds.current.min, true)}
+            >
+              <Text style={[styles.numberChipText, { color: themeColors.text.primary }]}>
+                {settings.thresholds.current.min.toFixed(1)}
+              </Text>
+              <Text style={[styles.numberChipUnit, { color: themeColors.text.secondary }]}>
+                {t('home.units.current')}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
       </Card>
@@ -335,58 +484,104 @@ export default function SettingsScreen() {
           <Text style={[styles.label, { color: themeColors.text.secondary }]}>
             {t('settings.thresholds.frequency.min')}
           </Text>
-          <View style={styles.inputContainer}>
-            <TextInput
+          {editingField === 'frequency.min' ? (
+            <View style={styles.inlineEditContainer}>
+              <TouchableOpacity
+                style={styles.inlineButton}
+                onPress={() => incrementValue(true, -1)}
+              >
+                <Ionicons name="remove-circle" size={32} color={themeColors.primary} />
+              </TouchableOpacity>
+              <Text style={[styles.inlineValue, { color: themeColors.text.primary }]}>
+                {editValue} {t('home.units.frequency')}
+              </Text>
+              <TouchableOpacity
+                style={styles.inlineButton}
+                onPress={() => incrementValue(true, 1)}
+              >
+                <Ionicons name="add-circle" size={32} color={themeColors.primary} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.inlineSaveButton, { backgroundColor: themeColors.success }]}
+                onPress={saveValue}
+              >
+                <Ionicons name="checkmark" size={20} color="white" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.inlineCancelButton}
+                onPress={cancelEditing}
+              >
+                <Ionicons name="close" size={20} color={themeColors.text.secondary} />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
               style={[
-                styles.input,
-                {
-                  color: themeColors.text.primary,
-                  backgroundColor: themeColors.background,
-                  borderColor: themeColors.border,
-                },
+                styles.numberChip,
+                { backgroundColor: themeColors.background, borderColor: themeColors.border }
               ]}
-              value={settings.thresholds.frequency.min.toFixed(1)}
-              keyboardType="numeric"
-              onChangeText={(text) => {
-                const value = parseFloat(text) || settings.thresholds.frequency.min;
-                updateThresholds({
-                  frequency: { ...settings.thresholds.frequency, min: value },
-                });
-              }}
-            />
-            <Text style={[styles.unit, { color: themeColors.text.secondary }]}>
-              {t('home.units.frequency')}
-            </Text>
-          </View>
+              onPress={() => startEditing('frequency.min', settings.thresholds.frequency.min, true)}
+            >
+              <Text style={[styles.numberChipText, { color: themeColors.text.primary }]}>
+                {settings.thresholds.frequency.min.toFixed(1)}
+              </Text>
+              <Text style={[styles.numberChipUnit, { color: themeColors.text.secondary }]}>
+                {t('home.units.frequency')}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.settingRow}>
           <Text style={[styles.label, { color: themeColors.text.secondary }]}>
             {t('settings.thresholds.frequency.max')}
           </Text>
-          <View style={styles.inputContainer}>
-            <TextInput
+          {editingField === 'frequency.max' ? (
+            <View style={styles.inlineEditContainer}>
+              <TouchableOpacity
+                style={styles.inlineButton}
+                onPress={() => incrementValue(true, -1)}
+              >
+                <Ionicons name="remove-circle" size={32} color={themeColors.primary} />
+              </TouchableOpacity>
+              <Text style={[styles.inlineValue, { color: themeColors.text.primary }]}>
+                {editValue} {t('home.units.frequency')}
+              </Text>
+              <TouchableOpacity
+                style={styles.inlineButton}
+                onPress={() => incrementValue(true, 1)}
+              >
+                <Ionicons name="add-circle" size={32} color={themeColors.primary} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.inlineSaveButton, { backgroundColor: themeColors.success }]}
+                onPress={saveValue}
+              >
+                <Ionicons name="checkmark" size={20} color="white" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.inlineCancelButton}
+                onPress={cancelEditing}
+              >
+                <Ionicons name="close" size={20} color={themeColors.text.secondary} />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
               style={[
-                styles.input,
-                {
-                  color: themeColors.text.primary,
-                  backgroundColor: themeColors.background,
-                  borderColor: themeColors.border,
-                },
+                styles.numberChip,
+                { backgroundColor: themeColors.background, borderColor: themeColors.border }
               ]}
-              value={settings.thresholds.frequency.max.toFixed(1)}
-              keyboardType="numeric"
-              onChangeText={(text) => {
-                const value = parseFloat(text) || settings.thresholds.frequency.max;
-                updateThresholds({
-                  frequency: { ...settings.thresholds.frequency, max: value },
-                });
-              }}
-            />
-            <Text style={[styles.unit, { color: themeColors.text.secondary }]}>
-              {t('home.units.frequency')}
-            </Text>
-          </View>
+              onPress={() => startEditing('frequency.max', settings.thresholds.frequency.max, true)}
+            >
+              <Text style={[styles.numberChipText, { color: themeColors.text.primary }]}>
+                {settings.thresholds.frequency.max.toFixed(1)}
+              </Text>
+              <Text style={[styles.numberChipUnit, { color: themeColors.text.secondary }]}>
+                {t('home.units.frequency')}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </Card>
 
@@ -399,29 +594,49 @@ export default function SettingsScreen() {
           <Text style={[styles.label, { color: themeColors.text.secondary }]}>
             {t('settings.thresholds.powerFactor.min')}
           </Text>
-          <View style={styles.inputContainer}>
-            <TextInput
+          {editingField === 'powerFactor.min' ? (
+            <View style={styles.inlineEditContainer}>
+              <TouchableOpacity
+                style={styles.inlineButton}
+                onPress={() => incrementValue(true, -1)}
+              >
+                <Ionicons name="remove-circle" size={32} color={themeColors.primary} />
+              </TouchableOpacity>
+              <Text style={[styles.inlineValue, { color: themeColors.text.primary }]}>
+                {editValue}
+              </Text>
+              <TouchableOpacity
+                style={styles.inlineButton}
+                onPress={() => incrementValue(true, 1)}
+              >
+                <Ionicons name="add-circle" size={32} color={themeColors.primary} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.inlineSaveButton, { backgroundColor: themeColors.success }]}
+                onPress={saveValue}
+              >
+                <Ionicons name="checkmark" size={20} color="white" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.inlineCancelButton}
+                onPress={cancelEditing}
+              >
+                <Ionicons name="close" size={20} color={themeColors.text.secondary} />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
               style={[
-                styles.input,
-                {
-                  color: themeColors.text.primary,
-                  backgroundColor: themeColors.background,
-                  borderColor: themeColors.border,
-                },
+                styles.numberChip,
+                { backgroundColor: themeColors.background, borderColor: themeColors.border }
               ]}
-              value={settings.thresholds.powerFactor.min.toFixed(2)}
-              keyboardType="numeric"
-              onChangeText={(text) => {
-                const value = parseFloat(text) || settings.thresholds.powerFactor.min;
-                updateThresholds({
-                  powerFactor: { ...settings.thresholds.powerFactor, min: value },
-                });
-              }}
-            />
-            <Text style={[styles.unit, { color: themeColors.text.secondary }]}>
-              {t('settings.thresholds.powerFactor.unit')}
-            </Text>
-          </View>
+              onPress={() => startEditing('powerFactor.min', settings.thresholds.powerFactor.min, true)}
+            >
+              <Text style={[styles.numberChipText, { color: themeColors.text.primary }]}>
+                {settings.thresholds.powerFactor.min.toFixed(2)}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </Card>
 
@@ -432,25 +647,73 @@ export default function SettingsScreen() {
 
         <View style={styles.settingRow}>
           <Text style={[styles.label, { color: themeColors.text.secondary }]}>
+            {t('settings.thresholds.reconnection.enabled')}
+          </Text>
+          <Switch
+            value={settings.reconnection.enabled}
+            onValueChange={(value) => {
+              updateThresholds({
+                reconnection: {
+                  ...settings.reconnection,
+                  enabled: value
+                }
+              });
+            }}
+            trackColor={{ false: themeColors.border, true: themeColors.success }}
+            thumbColor="white"
+          />
+        </View>
+
+        <View style={styles.settingRow}>
+          <Text style={[styles.label, { color: themeColors.text.secondary }]}>
             {t('settings.thresholds.reconnection.delay')}
           </Text>
-          <View style={styles.inputContainer}>
-            <TextInput
+          {editingField === 'reconnection.delay' ? (
+            <View style={styles.inlineEditContainer}>
+              <TouchableOpacity
+                style={styles.inlineButton}
+                onPress={() => incrementValue(false, -1)}
+              >
+                <Ionicons name="remove-circle" size={32} color={themeColors.primary} />
+              </TouchableOpacity>
+              <Text style={[styles.inlineValue, { color: themeColors.text.primary }]}>
+                {editValue} {t('settings.thresholds.reconnection.delayUnit')}
+              </Text>
+              <TouchableOpacity
+                style={styles.inlineButton}
+                onPress={() => incrementValue(false, 1)}
+              >
+                <Ionicons name="add-circle" size={32} color={themeColors.primary} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.inlineSaveButton, { backgroundColor: themeColors.success }]}
+                onPress={saveValue}
+              >
+                <Ionicons name="checkmark" size={20} color="white" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.inlineCancelButton}
+                onPress={cancelEditing}
+              >
+                <Ionicons name="close" size={20} color={themeColors.text.secondary} />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
               style={[
-                styles.input,
-                {
-                  color: themeColors.text.primary,
-                  backgroundColor: themeColors.background,
-                  borderColor: themeColors.border,
-                },
+                styles.numberChip,
+                { backgroundColor: themeColors.background, borderColor: themeColors.border }
               ]}
-              value={settings.reconnection.delay.toString()}
-              keyboardType="numeric"
-            />
-            <Text style={[styles.unit, { color: themeColors.text.secondary }]}>
-              {t('settings.thresholds.reconnection.delayUnit')}
-            </Text>
-          </View>
+              onPress={() => startEditing('reconnection.delay', settings.reconnection.delay, false)}
+            >
+              <Text style={[styles.numberChipText, { color: themeColors.text.primary }]}>
+                {settings.reconnection.delay}
+              </Text>
+              <Text style={[styles.numberChipUnit, { color: themeColors.text.secondary }]}>
+                {t('settings.thresholds.reconnection.delayUnit')}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </Card>
     </View>
@@ -515,18 +778,6 @@ export default function SettingsScreen() {
           <Switch
             value={settings.notifications.undervoltage ?? true}
             onValueChange={(value) => updateNotifications({ undervoltage: value })}
-            trackColor={{ false: themeColors.border, true: themeColors.success }}
-            thumbColor="white"
-          />
-        </View>
-
-        <View style={styles.settingRow}>
-          <Text style={[styles.label, { color: themeColors.text.secondary }]}>
-            {t('events.safetyFilter.types.overcurrent')}
-          </Text>
-          <Switch
-            value={settings.notifications.overcurrent ?? true}
-            onValueChange={(value) => updateNotifications({ overcurrent: value })}
             trackColor={{ false: themeColors.border, true: themeColors.success }}
             thumbColor="white"
           />
@@ -1276,5 +1527,112 @@ const styles = StyleSheet.create({
     ...typography.body,
     fontWeight: '700',
     letterSpacing: 0.5,
+  },
+  // Number input styles
+  numberChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.medium,
+    borderWidth: 1,
+    minWidth: 100,
+  },
+  numberChipText: {
+    ...typography.body,
+    fontWeight: '700',
+    fontSize: 18,
+  },
+  numberChipUnit: {
+    ...typography.bodySmall,
+    marginLeft: 4,
+  },
+  // Inline editing styles
+  inlineEditContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  inlineButton: {
+    padding: 4,
+  },
+  inlineValue: {
+    ...typography.body,
+    fontWeight: '700',
+    fontSize: 18,
+    minWidth: 80,
+    textAlign: 'center',
+  },
+  inlineSaveButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: spacing.xs,
+  },
+  inlineCancelButton: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // Number modal popup styles (bottom sheet)
+  numberModalOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'flex-end',
+  },
+  modalBackdrop: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  numberModalCard: {
+    borderTopLeftRadius: borderRadius.xlarge,
+    borderTopRightRadius: borderRadius.xlarge,
+    padding: spacing.lg,
+    paddingBottom: spacing.xxl,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 12,
+  },
+  numberPickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.lg,
+    marginBottom: spacing.lg,
+  },
+  numberDisplayContainer: {
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  numberDisplay: {
+    fontSize: 32,
+    fontWeight: '800',
+    letterSpacing: 1,
+    marginVertical: spacing.xs,
+  },
+  largeStepButton: {
+    width: 50,
+    height: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  smallStepButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

@@ -41,7 +41,20 @@ export const formatPower = (power: number): string => {
  * Format energy with unit
  */
 export const formatEnergy = (energy: number): string => {
-  return `${formatNumber(energy, 2)}${i18n.t('home.units.energy')}`;
+  const absEnergy = Math.abs(energy);
+  let decimals = 2;
+
+  if (absEnergy >= 10) {
+    decimals = 1;
+  } else if (absEnergy >= 1) {
+    decimals = 2;
+  } else if (absEnergy >= 0.1) {
+    decimals = 3;
+  } else {
+    decimals = 4;
+  }
+
+  return `${formatNumber(energy, decimals)}${i18n.t('home.units.energy')}`;
 };
 
 /**

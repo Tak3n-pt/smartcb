@@ -7,7 +7,6 @@ import { Link } from "expo-router";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useElectricalStore, useThemeStore } from "../../store";
-import { useMockData } from "../../hooks/useMockData";
 import { colors, typography, spacing, borderRadius } from "../../theme";
 import {
   formatPower,
@@ -20,8 +19,8 @@ import {
 } from "../../utils";
 
 export default function HomeScreen() {
-  // Keep mock data active while designing the layout
-  useMockData();
+  // Real data mode - no mock data needed
+  // 🔥 HOT RELOAD TEST - If you see this comment in console, hot reload is working!
 
   const { data, connection, toggleRelay } = useElectricalStore();
   const { theme } = useThemeStore();
@@ -117,7 +116,7 @@ export default function HomeScreen() {
               resizeMode="contain"
             />
             <Text style={[styles.logoText, { color: themeColors.text.primary }]}>
-              {t('common.appName')}
+              {t('common.appName')} 🔥
             </Text>
           </View>
         </View>

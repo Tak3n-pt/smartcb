@@ -1,5 +1,5 @@
 // Beautiful Bar Chart using React Native Skia
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import i18n from '../../i18n';
 import { Canvas, RoundedRect, Group } from '@shopify/react-native-skia';
@@ -34,7 +34,8 @@ const SkiaBarChartComponent: React.FC<SkiaBarChartProps> = ({
   theme = 'dark',
   formatValue = (v) => v.toFixed(2),
 }) => {
-  const colors = themeColors[theme];
+  // CRITICAL FIX: Memoize colors to prevent new object on every render
+  const colors = useMemo(() => themeColors[theme], [theme]);
   const hasData = Array.isArray(data) && data.length > 0 && maxValue > 0;
   const safeMax = Math.max(1e-6, maxValue || 0);
   const chartWidth = (hasData ? data.length : 1) * (barWidth + spacing) + spacing;
@@ -52,39 +53,39 @@ const SkiaBarChartComponent: React.FC<SkiaBarChartProps> = ({
           </View>
         ) : (
           <Canvas style={{ height, width: chartWidth }}>
-          {data.map((item, index) => {
-            const barHeight = (item.value / safeMax) * (height - 40);
-            const x = spacing + index * (barWidth + spacing);
-            const y = height - barHeight - 30;
-            const isHighlight = item.highlight;
-            const barColor = isHighlight ? highlightColor : primaryColor;
+            {data.map((item, index) => {
+              const barHeight = (item.value / safeMax) * (height - 40);
+              const x = spacing + index * (barWidth + spacing);
+              const y = height - barHeight - 30;
+              const isHighlight = item.highlight;
+              const barColor = isHighlight ? highlightColor : primaryColor;
 
-            return (
-              <Group key={index}>
-                {/* Bar with gradient effect */}
-                <RoundedRect
-                  x={x}
-                  y={y}
-                  width={barWidth}
-                  height={barHeight}
-                  r={4}
-                  color={barColor}
-                  opacity={isHighlight ? 1 : 0.7}
-                />
+              return (
+                <Group key={index}>
+                  {/* Bar with gradient effect */}
+                  <RoundedRect
+                    x={x}
+                    y={y}
+                    width={barWidth}
+                    height={barHeight}
+                    r={4}
+                    color={barColor}
+                    opacity={isHighlight ? 1 : 0.7}
+                  />
 
-                {/* Top rounded cap for modern look */}
-                <RoundedRect
-                  x={x}
-                  y={y}
-                  width={barWidth}
-                  height={8}
-                  r={4}
-                  color={barColor}
-                />
-              </Group>
-            );
-          })}
-        </Canvas>
+                  {/* Top rounded cap for modern look */}
+                  <RoundedRect
+                    x={x}
+                    y={y}
+                    width={barWidth}
+                    height={8}
+                    r={4}
+                    color={barColor}
+                  />
+                </Group>
+              );
+            })}
+          </Canvas>
         )}
 
         {hasData && (

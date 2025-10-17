@@ -13,9 +13,8 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, spacing, typography, borderRadius } from '../theme';
 import { useThemeStore, useElectricalStore } from '../store';
-import { SuccessModal } from '../components/SuccessModal';
 
-export default function SimpleLinkDeviceScreen() {
+export default function ModernLinkDeviceScreen() {
   const router = useRouter();
   const { theme } = useThemeStore();
   const { connectToESP32 } = useElectricalStore();
@@ -24,8 +23,6 @@ export default function SimpleLinkDeviceScreen() {
   const [isConnecting, setIsConnecting] = useState(false);
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [deviceData, setDeviceData] = useState<any>(null);
 
   const handleConnect = async () => {
     setIsConnecting(true);
@@ -57,20 +54,17 @@ export default function SimpleLinkDeviceScreen() {
         throw new Error('No data from ESP32');
       }
 
-      // Step 2: Connect using store (no need to test again, we already validated)
+      // Step 2: Connect using store
       setStatus('Connecting...');
-
-      // Connect to ESP32 - this will start real-time updates
       const connected = await connectToESP32('192.168.4.1');
 
       if (connected) {
-        setStatus('✅ Connected!');
+        setStatus('✅ Connected! Redirecting...');
 
-        // Save device data for the success modal
-        setDeviceData(data);
-
-        // Show success modal
-        setShowSuccessModal(true);
+        // Wait a moment then navigate
+        setTimeout(() => {
+          router.replace('/(tabs)');
+        }, 500);
       } else {
         throw new Error('Failed to establish connection');
       }
@@ -88,11 +82,6 @@ export default function SimpleLinkDeviceScreen() {
     } finally {
       setIsConnecting(false);
     }
-  };
-
-  const handleGetStarted = () => {
-    setShowSuccessModal(false);
-    router.replace('/(tabs)');
   };
 
   return (
@@ -189,16 +178,6 @@ export default function SimpleLinkDeviceScreen() {
           </Text>
         </TouchableOpacity>
       </View>
-
-      {/* 🎉 SUCCESS MODAL */}
-      <SuccessModal
-        visible={showSuccessModal}
-        title="Connection Successful!"
-        message={`Your SmartCB is now connected and ready to use.${deviceData ? `\n\nVoltage: ${deviceData.voltage?.toFixed(1)}V  •  Current: ${deviceData.current?.toFixed(2)}A  •  Power: ${deviceData.power?.toFixed(0)}W` : ''}`}
-        buttonText="Get Started"
-        onClose={handleGetStarted}
-        theme={theme}
-      />
     </SafeAreaView>
   );
 }

@@ -313,7 +313,8 @@
       "frequency": {
         "title": "Frequency",
         "standard": "Standard: 50 Hz ±0.5 Hz"
-      }
+      },
+      "waitingForData": "Waiting for more data..."
     },
     "dateFilter": {
       "title": "Event Date Range",
@@ -360,12 +361,26 @@
         "frequencyMin": "Frequency below minimum",
         "frequencyMax": "Frequency above maximum",
         "powerFactorMin": "Low power factor detected"
+      },
+      "descriptions": {
+        "manual_on": "Relay turned ON",
+        "manual_off": "Relay turned OFF",
+        "overvoltage": "High voltage detected: {{voltage}}V (Max: {{max}}V)",
+        "undervoltage": "Low voltage detected: {{voltage}}V (Min: {{min}}V)",
+        "overload": "Overload detected: {{current}}A (Max: {{max}}A)",
+        "underload": "Very low current: {{current}}A",
+        "outage": "Power outage detected",
+        "restore": "Power restored",
+        "frequency_max": "High frequency: {{frequency}}Hz (Max: {{max}}Hz)",
+        "frequency_min": "Low frequency: {{frequency}}Hz (Min: {{min}}Hz)",
+        "power_factor_min": "Low power factor: {{pf}} (Min: {{min}})"
       }
     },
     "presets": {
       "lastWeek": "Last Week",
       "lastMonth": "Last Month"
-    }
+    },
+    "loadMore": "Load More (Showing {{showing}} of {{total}})"
   },
   "settings": {
     "title": "Settings",
@@ -417,6 +432,7 @@
         "delayUnit": "seconds",
         "maxAttempts": "Maximum Attempts",
         "enable": "Enable Auto-Reconnection",
+        "enabled": "Enable Auto-Reconnect",
         "placeholder": "Enter delay"
       }
     },

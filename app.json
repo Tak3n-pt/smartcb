@@ -23,7 +23,8 @@
         "backgroundColor": "#121212"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.tak3n.smartcb"
     },
     "web": {
       "bundler": "metro",
